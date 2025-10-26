@@ -66,24 +66,57 @@
         .btn-trivia {
             background-color: #4CAF50; /* Verde para Jugar */
             color: white;
+            box-shadow: 0 4px #388E3C;
+        }
+        .btn-trivia:hover {
+            box-shadow: 0 6px #388E3C;
         }
         .btn-messages {
             background-color: #FFC107; /* Amarillo Brillante */
             color: var(--bee-black);
         }
-        /* 💡 Estilos del menú de juegos */
-        .menu-juegos-btn {
+        /* 💡 ESTILOS DEL BOTÓN DE MENÚ ÚNICO */
+        .btn-menu-toggle {
             background-color: var(--bee-black);
-            color: white;
-            border: 2px solid #374151;
-            box-shadow: 0 4px #374151;
+            color: var(--bee-yellow);
+            border: 3px solid var(--bee-yellow);
+            box-shadow: 0 5px #374151;
             padding: 1rem;
-            font-size: 1.1em;
+            font-size: 1.2em;
+            width: 100%;
+            border-radius: 1.5rem;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem; /* Separación del resto del contenido */
+        }
+        .btn-menu-toggle:hover {
+            box-shadow: 0 7px #374151;
+            transform: translateY(-2px);
+        }
+        
+        /* 🚨 ESTILOS DEL MENÚ FLOTANTE (DROPDOWN) */
+        #juegos-dropdown {
+            position: absolute; /* Posicionamiento flotante */
+            top: 20px; /* Ajustar posición dentro del contenedor */
+            left: 50%;
+            transform: translateX(-50%); /* Centrar horizontalmente */
+            z-index: 50; /* Para que esté sobre el contenido */
+            background-color: white;
+            border: 4px solid var(--honey-gold);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            text-align: left;
+        }
+        .juegos-dropdown-item {
             margin-bottom: 10px;
         }
-        .menu-juegos-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 5px #374151;
+        .hidden-dropdown {
+            display: none;
         }
         /* 💡 ESTILO DIRECTO DE INPUT DE CÁMARA (SIMULA UN BOTÓN) */
         .file-input-wrapper {
@@ -156,27 +189,37 @@
 </head>
 <body class="p-4 sm:p-8">
 
-    <div class="portal-container">
+    <div class="portal-container" style="position: relative;"> 
         <header class="mb-6">
             <p class="text-xs text-gray-500 uppercase font-semibold">¡Bienvenido a la Colmena!</p>
             <h1>Portal de Recuerdos 🍯</h1>
-            <p class="text-gray-600 mt-2">Deja un mensaje, una foto o video capturado ¡o entra a los juegos!</p>
+            <p class="text-gray-600 mt-2">Deja un mensaje, una foto o video capturado.</p>
         </header>
 
-        <section class="mb-6 p-4 border border-yellow-200 rounded-xl bg-yellow-50">
-            <h2 class="text-xl font-black mb-3 text-gray-800 flex items-center justify-center space-x-2">
-                <span class="text-2xl">🕹️</span>
-                <span id="menu-juegos-toggle">Menú de Juegos</span>
-            </h2>
+        <button id="menu-juegos-toggle" class="btn-menu-toggle">
+            <span class="mr-3 text-2xl">🕹️</span>
+            MENÚ DE JUEGOS
+            <span class="ml-3 text-xl">▼</span>
+        </button>
+
+        <div id="juegos-dropdown" class="hidden-dropdown">
+            <h3 class="text-xl font-black text-gray-800 mb-4 text-center">¡A Jugar!</h3>
             
-            <div id="juegos-menu" class="space-y-3 pt-2">
-                <a href="player.html" target="_blank" class="btn-portal btn-trivia menu-juegos-btn">
+            <div class="space-y-3">
+                <a href="player.html" target="_blank" class="btn-portal btn-trivia juegos-dropdown-item">
                     <span class="mr-3 text-2xl">🐝</span>
                     Trivia del 1er Año
                 </a>
-                <p class="text-sm text-gray-600 italic">Próximamente: Más diversión en la colmena!</p>
+                <a href="#" class="btn-portal bg-gray-400 text-gray-700 cursor-not-allowed">
+                    <span class="mr-3 text-2xl">🎉</span>
+                    Próximamente...
+                </a>
             </div>
-        </section>
+            <button id="cerrar-menu" class="text-sm text-gray-600 hover:text-gray-800 mt-4 w-full">
+                Cerrar
+            </button>
+        </div>
+
 
         <section class="p-4 rounded-xl border border-gray-200 bg-gray-50">
             <h2 class="text-xl font-bold mb-4 text-gray-800 flex items-center justify-center space-x-2">
