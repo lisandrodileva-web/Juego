@@ -11,7 +11,7 @@ const firebaseConfig = {
   authDomain: "juegos-cumple.firebaseapp.com",
   databaseURL: "https://juegos-cumple-default-rtdb.firebaseio.com", 
   projectId: "juegos-cumple",
-  storageBucket: "juegos-cumple.firebasestorage.app", // ⚠️ Necesario para Storage
+  storageBucket: "juegos-cumple.firebasestorage.app", 
   messagingSenderId: "595312538655",
   appId: "1:595312538655:web:93220a84570ff7461fd12a",
   measurementId: "G-V1YXNZXVQR"
@@ -19,19 +19,21 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
-const storage = getStorage(app); // 💡 Inicializar Storage
+const storage = getStorage(app); 
 const memoriesRef = dbRef(database, 'memories'); 
 
 const form = document.getElementById('memory-form');
 const nameInput = document.getElementById('guest-name');
 const messageInput = document.getElementById('guest-message');
+
+// 🚨 REFERENCIA ÚNICA AL INPUT CONSOLIDADO
 const fileInput = document.getElementById('guest-file'); 
+
 const submitButton = document.getElementById('submit-memory-btn');
 const memoriesList = document.getElementById('memories-list');
 const progressBarContainer = document.getElementById('upload-progress-bar-container');
 const progressBar = document.getElementById('upload-progress');
 const uploadStatus = document.getElementById('upload-status');
-const captureButton = document.getElementById('capture-btn'); 
 const fileNameDisplay = document.getElementById('file-name-display');
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -54,9 +56,6 @@ function listenForMemories() {
     });
 }
 
-/**
- * Renderiza la lista de mensajes, mostrando imágenes o videos si existen.
- */
 function renderMemories(memories) {
     memoriesList.innerHTML = '';
 
@@ -72,16 +71,13 @@ function renderMemories(memories) {
         let mediaContent = '';
         let messageText = m.message || '';
         
-        // 💡 Lógica para mostrar MEDIA (Foto o Video)
         if (m.mediaUrl && m.mediaType) {
             const isImage = m.mediaType.startsWith('image/');
             const isVideo = m.mediaType.startsWith('video/');
 
             if (isImage) {
-                // Estilos responsive para la imagen
                 mediaContent = `<img src="${m.mediaUrl}" alt="Recuerdo de ${m.name}" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px;">`;
             } else if (isVideo) {
-                // Estilos responsive para el video
                 mediaContent = `<video src="${m.mediaUrl}" controls style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px;"></video>`;
             }
         }
@@ -99,15 +95,10 @@ function renderMemories(memories) {
 }
 
 // =======================================================================
-// 2. AJUSTES DE INTERACCIÓN PARA CÁMARA
+// 2. AJUSTES DE INTERACCIÓN PARA CÁMARA (SIMPLIFICADO)
 // =======================================================================
 
-// 1. Conectar el botón visible con el input de archivo oculto
-captureButton.addEventListener('click', () => {
-    fileInput.click();
-});
-
-// 2. Mostrar el nombre del archivo capturado
+// 💡 Escuchar el cambio en el único input
 fileInput.addEventListener('change', () => {
     if (fileInput.files.length > 0) {
         fileNameDisplay.textContent = `Archivo capturado: ${fileInput.files[0].name}`;
@@ -126,8 +117,10 @@ form.addEventListener('submit', async (e) => {
     
     const name = nameInput.value.trim().substring(0, 30);
     const message = messageInput.value.trim();
-    const file = fileInput.files[0];
-
+    
+    // 💡 Archivo a subir es el del único input
+    let file = fileInput.files[0];
+    
     if (!name || (!message && !file)) {
         alert('Por favor, ingresa tu nombre y un mensaje de texto o captura una foto/video.');
         return;
@@ -202,6 +195,7 @@ form.addEventListener('submit', async (e) => {
         progressBarContainer.classList.add('hidden');
         progressBar.style.width = '0%';
         submitButton.disabled = false;
+        fileInput.value = ''; // Limpiar el input
     }
 });
 
