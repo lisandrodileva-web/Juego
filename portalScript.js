@@ -29,7 +29,6 @@ const form = document.getElementById('memory-form');
 const nameInput = document.getElementById('guest-name');
 const messageInput = document.getElementById('guest-message');
 
-// 🚨 ELEMENTOS DE CÁMARA (DOS INPUTS)
 const fileInputPhoto = document.getElementById('guest-file-photo'); 
 const fileInputVideo = document.getElementById('guest-file-video'); 
 
@@ -49,27 +48,36 @@ const cerrarMenuBtn = document.getElementById('cerrar-menu');
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 // =======================================================================
-// LÓGICA DEL MENÚ FLOTANTE
+// LÓGICA DEL MENÚ FLOTANTE (ARREGLADA)
 // =======================================================================
 
 function toggleJuegosMenu() {
+    // Si el elemento existe, simplemente alterna la clase
     if (juegosDropdown) {
         juegosDropdown.classList.toggle('hidden-dropdown');
     }
 }
 
-// 💡 ADICIÓN DE CHEQUEO DE EXISTENCIA (PREVIENE ERROR NULL)
+// 🚨 ADICIÓN DE EVENT LISTENERS DESPUÉS DE DECLARAR LAS FUNCIONES
 if (menuToggleBtn) {
-    menuToggleBtn.addEventListener('click', toggleJuegosMenu);
+    menuToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Evita que el clic se propague al body y lo cierre inmediatamente
+        toggleJuegosMenu();
+    });
 }
 if (cerrarMenuBtn) {
     cerrarMenuBtn.addEventListener('click', toggleJuegosMenu);
 }
+
+// Cerrar menú al hacer clic fuera de él
 document.addEventListener('click', (event) => {
-    if (!juegosDropdown) return;
-    const isClickInside = juegosDropdown.contains(event.target) || (menuToggleBtn && menuToggleBtn.contains(event.target));
+    if (!juegosDropdown || juegosDropdown.classList.contains('hidden-dropdown')) return;
     
-    if (!isClickInside && !juegosDropdown.classList.contains('hidden-dropdown')) {
+    // Si el clic no fue en el menú y no fue en el botón de toggle, lo cerramos
+    const isClickInsideMenu = juegosDropdown.contains(event.target);
+    const isClickOnToggle = menuToggleBtn && menuToggleBtn.contains(event.target);
+    
+    if (!isClickInsideMenu && !isClickOnToggle) {
         juegosDropdown.classList.add('hidden-dropdown');
     }
 });
@@ -135,13 +143,12 @@ function renderMemories(memories) {
 // 2. AJUSTES DE INTERACCIÓN PARA CÁMARA (LÓGICA DOBLE INPUT)
 // =======================================================================
 
-// 💡 CORRECCIÓN CRÍTICA: Solo añadir event listeners si los elementos existen
 if (fileInputPhoto) {
     fileInputPhoto.addEventListener('change', () => {
         fileNameDisplay.textContent = fileInputPhoto.files.length > 0 
             ? `Foto capturada: ${fileInputPhoto.files[0].name}` 
             : '';
-        if (fileInputVideo) fileInputVideo.value = ''; // Limpiar el otro input
+        if (fileInputVideo) fileInputVideo.value = ''; 
     });
 }
 
@@ -150,7 +157,7 @@ if (fileInputVideo) {
         fileNameDisplay.textContent = fileInputVideo.files.length > 0 
             ? `Video capturado: ${fileInputVideo.files[0].name}` 
             : '';
-        if (fileInputPhoto) fileInputPhoto.value = ''; // Limpiar el otro input
+        if (fileInputPhoto) fileInputPhoto.value = ''; 
     });
 }
 
@@ -159,99 +166,100 @@ if (fileInputVideo) {
 // 3. ENVIAR MENSAJES (Manejo de Storage)
 // =======================================================================
 
-form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const name = nameInput.value.trim().substring(0, 30);
-    const message = messageInput.value.trim();
-    
-    // Determinar qué input contiene el archivo
-    let file = null;
-    if (fileInputPhoto && fileInputPhoto.files.length > 0) {
-        file = fileInputPhoto.files[0];
-    } else if (fileInputVideo && fileInputVideo.files.length > 0) {
-        file = fileInputVideo.files[0];
-    }
-    
-    if (!name || (!message && !file)) {
-        alert('Por favor, ingresa tu nombre y un mensaje de texto o captura una foto/video.');
-        return;
-    }
-
-    if (file && file.size > MAX_FILE_SIZE) {
-        alert('El archivo es demasiado grande. El límite es de 10MB.');
-        return;
-    }
-
-    submitButton.disabled = true;
-
-    try {
-        let mediaUrl = null;
-        let mediaType = null;
-
-        if (file) {
-            // 1. Mostrar barra de progreso
-            progressBarContainer.classList.remove('hidden');
-            uploadStatus.textContent = 'Iniciando subida...';
-
-            // 2. Definir referencia de Storage
-            const fileExtension = file.name.split('.').pop();
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
-            const sRef = storageRef(storage, `memories/${fileName}`);
-
-            // 3. Subir archivo
-            const uploadTask = uploadBytesResumable(sRef, file);
-
-            // 4. Monitorear el progreso
-            await new Promise((resolve, reject) => {
-                uploadTask.on('state_changed', 
-                    (snapshot) => {
-                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                        progressBar.style.width = progress + '%';
-                        uploadStatus.textContent = `Subiendo: ${Math.round(progress)}%`;
-                    }, 
-                    (error) => {
-                        console.error("Error de subida:", error);
-                        alert("Error al subir el archivo: " + error.message);
-                        reject(error);
-                    }, 
-                    async () => {
-                        // 5. Subida completa: Obtener URL de descarga
-                        mediaUrl = await getDownloadURL(uploadTask.snapshot.ref);
-                        mediaType = file.type;
-                        resolve();
-                    }
-                );
-            });
+if (form) {
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const name = nameInput.value.trim().substring(0, 30);
+        const message = messageInput.value.trim();
+        
+        let file = null;
+        if (fileInputPhoto && fileInputPhoto.files.length > 0) {
+            file = fileInputPhoto.files[0];
+        } else if (fileInputVideo && fileInputVideo.files.length > 0) {
+            file = fileInputVideo.files[0];
+        }
+        
+        if (!name || (!message && !file)) {
+            alert('Por favor, ingresa tu nombre y un mensaje de texto o captura una foto/video.');
+            return;
         }
 
-        // 6. Guardar metadatos en Realtime Database
-        const newMemory = {
-            name: name,
-            message: message,
-            mediaUrl: mediaUrl,
-            mediaType: mediaType,
-            timestamp: Date.now()
-        };
+        if (file && file.size > MAX_FILE_SIZE) {
+            alert('El archivo es demasiado grande. El límite es de 10MB.');
+            return;
+        }
 
-        await push(memoriesRef, newMemory);
-        alert('¡Recuerdo enviado con éxito a la Colmena!');
-        
-    } catch (error) {
-        console.error("Error general al enviar el recuerdo:", error);
-        alert(`Error al enviar el recuerdo: ${error.message}`);
-    } finally {
-        // 7. Resetear UI y botón
-        form.reset();
-        fileNameDisplay.textContent = '';
-        progressBarContainer.classList.add('hidden');
-        progressBar.style.width = '0%';
-        submitButton.disabled = false;
-        // Limpiar los inputs de archivo después de subir
-        if (fileInputPhoto) fileInputPhoto.value = '';
-        if (fileInputVideo) fileInputVideo.value = '';
-    }
-});
+        submitButton.disabled = true;
+
+        try {
+            let mediaUrl = null;
+            let mediaType = null;
+
+            if (file) {
+                // 1. Mostrar barra de progreso
+                progressBarContainer.classList.remove('hidden');
+                uploadStatus.textContent = 'Iniciando subida...';
+
+                // 2. Definir referencia de Storage
+                const fileExtension = file.name.split('.').pop();
+                const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
+                const sRef = storageRef(storage, `memories/${fileName}`);
+
+                // 3. Subir archivo
+                const uploadTask = uploadBytesResumable(sRef, file);
+
+                // 4. Monitorear el progreso
+                await new Promise((resolve, reject) => {
+                    uploadTask.on('state_changed', 
+                        (snapshot) => {
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            progressBar.style.width = progress + '%';
+                            uploadStatus.textContent = `Subiendo: ${Math.round(progress)}%`;
+                        }, 
+                        (error) => {
+                            console.error("Error de subida:", error);
+                            alert("Error al subir el archivo: " + error.message);
+                            reject(error);
+                        }, 
+                        async () => {
+                            // 5. Subida completa: Obtener URL de descarga
+                            mediaUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                            mediaType = file.type;
+                            resolve();
+                        }
+                    );
+                });
+            }
+
+            // 6. Guardar metadatos en Realtime Database
+            const newMemory = {
+                name: name,
+                message: message,
+                mediaUrl: mediaUrl,
+                mediaType: mediaType,
+                timestamp: Date.now()
+            };
+
+            await push(memoriesRef, newMemory);
+            alert('¡Recuerdo enviado con éxito a la Colmena!');
+            
+        } catch (error) {
+            console.error("Error general al enviar el recuerdo:", error);
+            alert(`Error al enviar el recuerdo: ${error.message}`);
+        } finally {
+            // 7. Resetear UI y botón
+            form.reset();
+            fileNameDisplay.textContent = '';
+            progressBarContainer.classList.add('hidden');
+            progressBar.style.width = '0%';
+            submitButton.disabled = false;
+            // Limpiar los inputs de archivo después de subir
+            if (fileInputPhoto) fileInputPhoto.value = '';
+            if (fileInputVideo) fileInputVideo.value = '';
+        }
+    });
+}
 
 // Iniciar la escucha de mensajes al cargar la página
 listenForMemories();
