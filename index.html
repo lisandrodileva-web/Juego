@@ -71,6 +71,20 @@
             background-color: #FFC107; /* Amarillo Brillante */
             color: var(--bee-black);
         }
+        /* 💡 Estilos del menú de juegos */
+        .menu-juegos-btn {
+            background-color: var(--bee-black);
+            color: white;
+            border: 2px solid #374151;
+            box-shadow: 0 4px #374151;
+            padding: 1rem;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        .menu-juegos-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px #374151;
+        }
         /* 💡 ESTILO DIRECTO DE INPUT DE CÁMARA (SIMULA UN BOTÓN) */
         .file-input-wrapper {
             position: relative;
@@ -134,10 +148,6 @@
             transition: width 0.3s ease;
         }
 
-        /* Ocultar inputs de archivo por defecto */
-        #guest-file-photo, #guest-file-video {
-            display: none;
-        }
         /* Asegurar la responsividad de los inputs */
         .input-bee, .textarea-bee {
             box-sizing: border-box;
@@ -150,18 +160,22 @@
         <header class="mb-6">
             <p class="text-xs text-gray-500 uppercase font-semibold">¡Bienvenido a la Colmena!</p>
             <h1>Portal de Recuerdos 🍯</h1>
-            <p class="text-gray-600 mt-2">Deja un mensaje, una foto o video capturado ¡o entra a los juegos y divertite!</p>
+            <p class="text-gray-600 mt-2">Deja un mensaje, una foto o video capturado ¡o entra a los juegos!</p>
         </header>
 
         <section class="mb-6 p-4 border border-yellow-200 rounded-xl bg-yellow-50">
-            <h2 class="text-xl font-bold mb-3 text-gray-800 flex items-center justify-center space-x-2">
+            <h2 class="text-xl font-black mb-3 text-gray-800 flex items-center justify-center space-x-2">
                 <span class="text-2xl">🕹️</span>
-                <span>¡A Jugar!</span>
+                <span id="menu-juegos-toggle">Menú de Juegos</span>
             </h2>
-            <a href="player.html" target="_blank" class="btn-portal btn-trivia">
-                <span class="mr-3 text-2xl">🐝</span>
-                Trivia del 1er Año
-            </a>
+            
+            <div id="juegos-menu" class="space-y-3 pt-2">
+                <a href="player.html" target="_blank" class="btn-portal btn-trivia menu-juegos-btn">
+                    <span class="mr-3 text-2xl">🐝</span>
+                    Trivia del 1er Año
+                </a>
+                <p class="text-sm text-gray-600 italic">Próximamente: Más diversión en la colmena!</p>
+            </div>
         </section>
 
         <section class="p-4 rounded-xl border border-gray-200 bg-gray-50">
@@ -180,25 +194,13 @@
                 
                 <div class="flex flex-col items-center space-y-2">
                     
-                    <div class="flex space-x-2 w-full">
-                        
-                        <div class="file-input-wrapper w-1/2">
-                            <label for="guest-file-photo" class="btn-file-label">
-                                <span class="mr-1">📸</span> Capturar Foto
-                            </label>
-                            <input type="file" id="guest-file-photo" 
-                                   accept="image/*" 
-                                   capture="camera"> 
-                        </div>
-                        
-                        <div class="file-input-wrapper w-1/2">
-                            <label for="guest-file-video" class="btn-file-label">
-                                <span class="mr-1">🎥</span> Grabar Video
-                            </label>
-                            <input type="file" id="guest-file-video" 
-                                   accept="video/*" 
-                                   capture="camcorder"> 
-                        </div>
+                    <div class="file-input-wrapper">
+                        <label for="guest-file" class="btn-file-label">
+                            <span class="mr-1">📸🎥</span> Capturar Foto o Video
+                        </label>
+                        <input type="file" id="guest-file" 
+                               accept="image/*,video/*" 
+                               capture="environment"> 
                     </div>
                            
                     <p id="file-name-display" class="text-sm text-gray-600 italic mt-2"></p>
