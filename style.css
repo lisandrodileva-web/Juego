@@ -1,33 +1,45 @@
+/* --- VARIABLES DE COLOR PRIMAVERAL --- */
+:root {
+    --bee-yellow: #FFC107;      /* Amarillo Brillante */
+    --bee-black: #212529;       /* Negro Suave */
+    --honey-gold: #FF9800;      /* Miel Naranja (Profundidad) */
+    --spring-green: #66BB6A;    /* Verde Hoja */
+    --spring-shadow: #388E3C;   /* Sombra Verde Profunda */
+    --spring-bg: #E8F5E9;       /* Fondo Blanco Verdoso Suave */
+}
+
 /* --- ESTILOS GLOBALES Y CONTENEDOR --- */
 
 body {
-    font-family: 'Poppins', sans-serif; /* 👈 Fuente moderna y legible */
-    background: #f7e6a7; 
+    font-family: 'Poppins', sans-serif;
+    /* 🚨 Cambio a fondo primaveral suave */
+    background: linear-gradient(135deg, #FFFDE7 0%, var(--spring-bg) 100%); 
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     margin: 0;
     padding: 20px;
+    transition: background 0.5s ease;
 }
 
 .quiz-container {
     background: #ffffff; /* Fondo blanco puro */
     padding: 30px;
-    border-radius: 25px; /* Bordes más redondeados */
-    /* Sombra suave y moderna (Neumorfismo suave) */
+    border-radius: 25px; 
+    /* Sombra suave y moderna (Efecto 'flotante') */
     box-shadow: 
-        0 10px 30px rgba(0, 0, 0, 0.1), /* Sombra principal ligera */
+        0 15px 30px rgba(0, 0, 0, 0.1), /* Sombra principal ligera */
         0 0 0 5px rgba(255, 204, 0, 0.1); /* Borde de resplandor amarillo suave */
     width: 100%;
-    max-width: 650px; /* Un poco más ancho */
+    max-width: 650px; 
     text-align: center;
-    border: none; /* Eliminamos el borde duro */
+    border: none; 
 }
 
 h1 {
-    color: #333;
-    font-size: 2em; /* Título más grande */
+    color: var(--bee-black);
+    font-size: 2em; 
     font-weight: 700;
     margin-bottom: 20px;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
@@ -41,13 +53,13 @@ h1 {
     align-items: center;
     margin-bottom: 25px;
     padding: 12px 20px;
-    background: #fff8e1; /* Color miel suave */
+    background: #fff8e1; 
     border-radius: 15px;
     border: none;
-    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05); /* Sombra interna sutil */
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05); 
 }
 
-/* 💡 AJUSTE RESPONSIVE: Apilar el encabezado en pantallas móviles */
+/* 💡 AJUSTE RESPONSIVE */
 @media (max-width: 450px) {
     #quiz-header {
         flex-direction: column; 
@@ -55,7 +67,7 @@ h1 {
         padding: 10px;
     }
     .timer, .score, #player-name-display {
-        width: 100%; /* Ocupar todo el ancho para centrar/alinear */
+        width: 100%; 
         text-align: center;
         font-size: 1.1em;
     }
@@ -72,7 +84,7 @@ h1 {
 
 #question {
     color: #444;
-    font-size: 1.5em; /* Pregunta más prominente */
+    font-size: 1.5em; 
     font-weight: 600;
     margin-bottom: 30px;
     line-height: 1.4;
@@ -81,38 +93,40 @@ h1 {
 .options-container {
     display: flex;
     flex-direction: column;
-    gap: 12px; /* Espaciado ajustado */
+    gap: 12px; 
 }
 
 .option-btn {
-    background-color: #ffb300; /* Amarillo Abeja */
+    background-color: var(--honey-gold); 
     color: white;
     border: none;
     padding: 15px 25px;
     border-radius: 12px;
     font-size: 1.1em;
     cursor: pointer;
-    transition: all 0.2s ease-in-out; /* Transición más suave */
-    box-shadow: 0 5px #e69900; /* Sombra de botón 'presionable' */
+    /* 🚨 Transición suave para todos los cambios */
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+    /* 🚨 Relieve/Sombra de Botón Presionable */
+    box-shadow: 0 6px var(--honey-gold); 
 }
 
 /* Efecto Hover Moderno: Sube ligeramente y oscurece */
 .option-btn:hover {
-    background-color: #ff9900;
-    transform: translateY(-2px);
-    box-shadow: 0 7px #e69900; 
+    background-color: #f57c00; /* Color ligeramente más oscuro */
+    transform: translateY(-3px);
+    box-shadow: 0 9px #e65100; /* Sombra más pronunciada al flotar */
 }
 
-/* Efecto al presionar (Active) */
+/* 🚨 Efecto al presionar (Active): Baja y la sombra se reduce */
 .option-btn:active {
     transform: translateY(3px);
-    box-shadow: 0 2px #e69900;
+    box-shadow: 0 2px #e65100;
 }
 
 /* Clases para feedback (mantener colores fuertes) */
 .correct {
-    background-color: #4caf50 !important; 
-    box-shadow: 0 5px #388e3c !important;
+    background-color: var(--spring-green) !important; 
+    box-shadow: 0 5px var(--spring-shadow) !important;
     transform: none !important;
 }
 
@@ -122,22 +136,51 @@ h1 {
     transform: none !important;
 }
 
-/* Botón Siguiente */
-#next-btn {
-    background-color: #007bff;
+/* Botón Siguiente - Estilo Fijo para Móviles */
+#next-button-fixed-container {
+    position: fixed; 
+    bottom: 0; 
+    left: 0; 
+    width: 100%;
+    padding: 10px 20px;
+    background-color: #ffffff; /* Fondo blanco para aislarlo del contenido */
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1); 
+    box-sizing: border-box;
+    z-index: 1000; 
+    display: flex;
+    justify-content: center; 
+}
+#next-button-fixed-container #next-btn {
+    width: 100%;
+    max-width: 400px; 
+    background-color: var(--spring-green);
     color: white;
     border: none;
-    padding: 12px 25px;
+    padding: 15px 25px;
     border-radius: 12px;
-    font-size: 1em;
+    font-size: 1.1em;
     cursor: pointer;
-    margin-top: 30px;
-    transition: background-color 0.2s;
-    box-shadow: 0 4px #0056b3;
+    /* 🚨 Estilos de relieve */
+    box-shadow: 0 6px var(--spring-shadow);
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
 }
-#next-btn:hover {
-    background-color: #0056b3;
+
+#next-button-fixed-container #next-btn:hover {
+    background-color: #43A047;
+    transform: translateY(-3px);
+    box-shadow: 0 9px #388E3C; 
 }
+
+#next-button-fixed-container #next-btn:active {
+    transform: translateY(3px);
+    box-shadow: 0 2px #388E3C; 
+}
+
+/* Padding para que el contenido no quede oculto detrás del botón fijo */
+.game-padding {
+    padding-bottom: 100px; 
+}
+
 
 /* Resultados Finales */
 .results-container {
@@ -149,7 +192,7 @@ h1 {
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 .results-container h2 {
-    color: #e69900;
+    color: var(--honey-gold);
     font-size: 2em;
     margin-bottom: 15px;
 }
@@ -162,7 +205,7 @@ h1 {
 
 /* Botón Jugar de Nuevo */
 .results-container button {
-    background-color: #ffb300;
+    background-color: var(--honey-gold);
     color: white;
     border: none;
     padding: 12px 30px;
@@ -170,22 +213,27 @@ h1 {
     font-size: 1.1em;
     cursor: pointer;
     margin-top: 25px;
-    box-shadow: 0 4px #e69900;
-    transition: transform 0.2s;
+    /* 🚨 Estilos de relieve */
+    box-shadow: 0 4px #e65100;
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 .results-container button:hover {
-    background-color: #ff9900;
-    transform: translateY(-1px);
+    background-color: #f57c00;
+    transform: translateY(-2px);
+    box-shadow: 0 6px #e65100;
+}
+.results-container button:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px #e65100;
 }
 
-/* --- ESTILOS DEL MODO ANFITRIÓN (index.html) --- */
+/* --- ESTILOS DEL MODO ANFITRIÓN (host.html) --- */
 
 .admin-mode {
     background: #fcfcfc;
-    border-color: #e69900;
+    border-color: var(--honey-gold);
     text-align: left;
 }
-/* ... otros estilos del formulario y lista de preguntas mantienen la coherencia ... */
 .save-btn, .clear-btn {
     padding: 12px 20px;
     border-radius: 8px;
@@ -193,12 +241,11 @@ h1 {
 }
 
 
-<style>
-    /* ... tus estilos de Tailwind ... */
+/* --- ESTILOS DE BOTONES DE OPCIÓN (Trivia) --- */
 
+<style>
     /* DEFINICIÓN DE BOTÓN DE OPCIÓN */
     .option-btn {
-        /* Estilos base del botón */
         width: 100%;
         padding: 12px 15px;
         margin: 5px 0;
@@ -206,7 +253,7 @@ h1 {
         font-size: 1.1em;
         font-weight: bold;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         text-align: center;
         
         /* Tema Colmena (Yellow/Black) */
@@ -217,8 +264,8 @@ h1 {
     }
 
     .option-btn:hover:not(:disabled) {
-        background-color: #ffc107; /* Amarillo más intenso al pasar el mouse */
-        transform: translateY(-2px);
+        background-color: #ffc107; 
+        transform: translateY(-3px);
         box-shadow: 0 6px var(--honey-gold);
     }
 
@@ -229,10 +276,10 @@ h1 {
 
     /* Feedback de Respuesta Correcta */
     .option-btn.correct {
-        background-color: #4CAF50 !important; /* Verde sólido */
-        border-color: #388E3C !important;
+        background-color: var(--spring-green) !important; /* Verde sólido */
+        border-color: var(--spring-shadow) !important;
         color: white;
-        box-shadow: 0 4px #388E3C !important;
+        box-shadow: 0 4px var(--spring-shadow) !important;
         transform: none !important;
     }
 
