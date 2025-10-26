@@ -58,10 +58,9 @@ function toggleJuegosMenu() {
 }
 
 if (menuToggleBtn) {
-    // 🚨 CORRECCIÓN: Usar e.preventDefault() en el toque (touchstart/click)
-    // para asegurar que el sistema operativo no interfiera con el clic.
+    // 🚨 CORRECCIÓN: Usar e.stopPropagation() para detener el evento y evitar el cierre inmediato en móviles
     menuToggleBtn.addEventListener('click', (e) => {
-        e.stopPropagation(); // Previene que el clic de apertura llegue al body/document
+        e.stopPropagation(); 
         toggleJuegosMenu();
     });
 }
@@ -73,7 +72,6 @@ if (cerrarMenuBtn) {
 document.addEventListener('click', (event) => {
     if (!juegosDropdown || juegosDropdown.classList.contains('hidden-dropdown')) return;
     
-    // Si el clic no fue en el menú Y no fue en el botón de toggle, lo cerramos
     const isClickInsideMenu = juegosDropdown.contains(event.target);
     const isClickOnToggle = menuToggleBtn && menuToggleBtn.contains(event.target);
     
