@@ -26,7 +26,7 @@ const form = document.getElementById('memory-form');
 const nameInput = document.getElementById('guest-name');
 const messageInput = document.getElementById('guest-message');
 
-// 🚨 REFERENCIA ÚNICA AL INPUT CONSOLIDADO
+// 🚨 REFERENCIA ÚNICA AL INPUT CONSOLIDADDO (CORREGIDO)
 const fileInput = document.getElementById('guest-file'); 
 
 const submitButton = document.getElementById('submit-memory-btn');
@@ -98,7 +98,7 @@ function renderMemories(memories) {
 // 2. AJUSTES DE INTERACCIÓN PARA CÁMARA (SIMPLIFICADO)
 // =======================================================================
 
-// 💡 Escuchar el cambio en el único input
+// 💡 AHORA ESTA LÍNEA FUNCIONARÁ PORQUE 'fileInput' NO ES NULL
 fileInput.addEventListener('change', () => {
     if (fileInput.files.length > 0) {
         fileNameDisplay.textContent = `Archivo capturado: ${fileInput.files[0].name}`;
@@ -118,7 +118,6 @@ form.addEventListener('submit', async (e) => {
     const name = nameInput.value.trim().substring(0, 30);
     const message = messageInput.value.trim();
     
-    // 💡 Archivo a subir es el del único input
     let file = fileInput.files[0];
     
     if (!name || (!message && !file)) {
