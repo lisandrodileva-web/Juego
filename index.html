@@ -8,11 +8,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css"> 
     <style>
-        /* Estilos específicos mínimos, el resto se hereda de style.css */
+        /* Estilos CSS mínimos para el funcionamiento instantáneo */
         .file-input-wrapper { display: block; width: 100%; margin-bottom: 8px; position: relative; overflow: hidden; }
         .file-input-wrapper input[type=file] { position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; height: 100%; width: 100%; }
-        /* Ocultar los inputs de archivo, pero la etiqueta/botón es visible */
-        #guest-file-photo, #guest-file-video { display: none; } 
+        #guest-file-photo, #guest-file-video { display: none; }
+        
+        /* 🚨 FALLBACK CRÍTICO: Asegurar que el menú esté oculto por defecto */
+        #juegos-dropdown {
+            display: none; /* Asegura que no se muestre al cargar */
+        }
+        .hidden-dropdown {
+            display: none !important;
+        }
     </style>
 </head>
 <body class="p-4 sm:p-8">
