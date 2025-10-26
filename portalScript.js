@@ -25,8 +25,9 @@ const form = document.getElementById('memory-form');
 const nameInput = document.getElementById('guest-name');
 const messageInput = document.getElementById('guest-message');
 
-// 🚨 REFERENCIA ÚNICA AL INPUT CONSOLIDADDO (CORREGIDO)
-const fileInput = document.getElementById('guest-file'); 
+// 🚨 REFERENCIAS A LOS DOS INPUTS
+const fileInputPhoto = document.getElementById('guest-file-photo'); 
+const fileInputVideo = document.getElementById('guest-file-video'); 
 
 const submitButton = document.getElementById('submit-memory-btn');
 const memoriesList = document.getElementById('memories-list');
@@ -94,16 +95,23 @@ function renderMemories(memories) {
 }
 
 // =======================================================================
-// 2. AJUSTES DE INTERACCIÓN PARA CÁMARA (SIMPLIFICADO)
+// 2. AJUSTES DE INTERACCIÓN PARA CÁMARA (LÓGICA DOBLE INPUT)
 // =======================================================================
 
-// 💡 ESTA LÍNEA AHORA FUNCIONA porque 'fileInput' tiene el ID correcto del HTML
-fileInput.addEventListener('change', () => {
-    if (fileInput.files.length > 0) {
-        fileNameDisplay.textContent = `Archivo capturado: ${fileInput.files[0].name}`;
-    } else {
-        fileNameDisplay.textContent = '';
-    }
+// 1. Mostrar el nombre del archivo capturado por Foto
+fileInputPhoto.addEventListener('change', () => {
+    fileNameDisplay.textContent = fileInputPhoto.files.length > 0 
+        ? `Foto capturada: ${fileInputPhoto.files[0].name}` 
+        : '';
+    fileInputVideo.value = ''; // Limpiar el otro input
+});
+
+// 2. Mostrar el nombre del archivo capturado por Video
+fileInputVideo.addEventListener('change', () => {
+    fileNameDisplay.textContent = fileInputVideo.files.length > 0 
+        ? `Video capturado: ${fileInputVideo.files[0].name}` 
+        : '';
+    fileInputPhoto.value = ''; // Limpiar el otro input
 });
 
 
@@ -117,7 +125,13 @@ form.addEventListener('submit', async (e) => {
     const name = nameInput.value.trim().substring(0, 30);
     const message = messageInput.value.trim();
     
-    let file = fileInput.files[0];
+    // 🚨 Determinar qué input contiene el archivo
+    let file = null;
+    if (fileInputPhoto.files.length > 0) {
+        file = fileInputPhoto.files[0];
+    } else if (fileInputVideo.files.length > 0) {
+        file = fileInputVideo.files[0];
+    }
     
     if (!name || (!message && !file)) {
         alert('Por favor, ingresa tu nombre y un mensaje de texto o captura una foto/video.');
@@ -193,7 +207,8 @@ form.addEventListener('submit', async (e) => {
         progressBarContainer.classList.add('hidden');
         progressBar.style.width = '0%';
         submitButton.disabled = false;
-        fileInput.value = ''; // Limpiar el input
+        fileInputPhoto.value = '';
+        fileInputVideo.value = '';
     }
 });
 
