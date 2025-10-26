@@ -1,6 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getDatabase, ref as dbRef, push, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-// 💡 IMPORTACIÓN DE FIREBASE STORAGE
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 
 // =======================================================================
@@ -98,7 +97,7 @@ function renderMemories(memories) {
 // 2. AJUSTES DE INTERACCIÓN PARA CÁMARA (SIMPLIFICADO)
 // =======================================================================
 
-// 💡 AHORA ESTA LÍNEA FUNCIONARÁ PORQUE 'fileInput' NO ES NULL
+// 💡 ESTA LÍNEA AHORA FUNCIONA porque 'fileInput' tiene el ID correcto del HTML
 fileInput.addEventListener('change', () => {
     if (fileInput.files.length > 0) {
         fileNameDisplay.textContent = `Archivo capturado: ${fileInput.files[0].name}`;
