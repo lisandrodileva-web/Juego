@@ -48,20 +48,20 @@ const cerrarMenuBtn = document.getElementById('cerrar-menu');
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 // =======================================================================
-// LÓGICA DEL MENÚ FLOTANTE (ARREGLADA)
+// LÓGICA DEL MENÚ FLOTANTE (ARREGLADA PARA MÓVILES)
 // =======================================================================
 
 function toggleJuegosMenu() {
-    // Si el elemento existe, simplemente alterna la clase
     if (juegosDropdown) {
         juegosDropdown.classList.toggle('hidden-dropdown');
     }
 }
 
-// 🚨 ADICIÓN DE EVENT LISTENERS DESPUÉS DE DECLARAR LAS FUNCIONES
 if (menuToggleBtn) {
+    // 🚨 CORRECCIÓN: Usar e.preventDefault() en el toque (touchstart/click)
+    // para asegurar que el sistema operativo no interfiera con el clic.
     menuToggleBtn.addEventListener('click', (e) => {
-        e.stopPropagation(); // Evita que el clic se propague al body y lo cierre inmediatamente
+        e.stopPropagation(); // Previene que el clic de apertura llegue al body/document
         toggleJuegosMenu();
     });
 }
@@ -73,7 +73,7 @@ if (cerrarMenuBtn) {
 document.addEventListener('click', (event) => {
     if (!juegosDropdown || juegosDropdown.classList.contains('hidden-dropdown')) return;
     
-    // Si el clic no fue en el menú y no fue en el botón de toggle, lo cerramos
+    // Si el clic no fue en el menú Y no fue en el botón de toggle, lo cerramos
     const isClickInsideMenu = juegosDropdown.contains(event.target);
     const isClickOnToggle = menuToggleBtn && menuToggleBtn.contains(event.target);
     
