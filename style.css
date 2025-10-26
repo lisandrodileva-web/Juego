@@ -90,22 +90,7 @@ h1 {
     box-shadow: 0 6px #FF9800;
 }
 
-/* 💡 ESTILOS DEL BOTÓN DE CÁMARA (Relieve) */
-.btn-file-label {
-    background-color: #EF4444; 
-    color: white;
-    box-shadow: 0 4px #c21a1a; 
-    transition: all 0.2s ease;
-}
-.btn-file-label:hover {
-    background-color: #dc2626;
-    box-shadow: 0 6px #c21a1a;
-    transform: translateY(-2px);
-}
-.btn-file-label:active {
-    transform: translateY(2px);
-    box-shadow: 0 2px #c21a1a;
-}
+
 /* --- ESTILOS DEL MODO JUEGO (#player.html) --- */
 
 #quiz-header {
