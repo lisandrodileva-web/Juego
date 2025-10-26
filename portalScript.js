@@ -3,7 +3,7 @@ import { getDatabase, ref as dbRef, push, onValue } from "https://www.gstatic.co
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 
 // =======================================================================
-// CONFIGURACIÓN DE FIREBASE (MISMA QUE EN script.js)
+// CONFIGURACIÓN DE FIREBASE
 // =======================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDRsS6YQ481KQadSk8gf9QtxVt_asnrDlc",
@@ -21,11 +21,15 @@ const database = getDatabase(app);
 const storage = getStorage(app); 
 const memoriesRef = dbRef(database, 'memories'); 
 
+// =======================================================================
+// DECLARACIONES DEL DOM
+// =======================================================================
+
 const form = document.getElementById('memory-form');
 const nameInput = document.getElementById('guest-name');
 const messageInput = document.getElementById('guest-message');
 
-// 🚨 REFERENCIAS A LOS DOS INPUTS
+// 🚨 ELEMENTOS DE CÁMARA (DOS INPUTS)
 const fileInputPhoto = document.getElementById('guest-file-photo'); 
 const fileInputVideo = document.getElementById('guest-file-video'); 
 
@@ -36,7 +40,40 @@ const progressBar = document.getElementById('upload-progress');
 const uploadStatus = document.getElementById('upload-status');
 const fileNameDisplay = document.getElementById('file-name-display');
 
+// 💡 ELEMENTOS DEL MENÚ FLOTANTE
+const menuToggleBtn = document.getElementById('menu-juegos-toggle');
+const juegosDropdown = document.getElementById('juegos-dropdown');
+const cerrarMenuBtn = document.getElementById('cerrar-menu');
+
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+// =======================================================================
+// LÓGICA DEL MENÚ FLOTANTE
+// =======================================================================
+
+function toggleJuegosMenu() {
+    if (juegosDropdown) {
+        juegosDropdown.classList.toggle('hidden-dropdown');
+    }
+}
+
+// 💡 ADICIÓN DE CHEQUEO DE EXISTENCIA (PREVIENE ERROR NULL)
+if (menuToggleBtn) {
+    menuToggleBtn.addEventListener('click', toggleJuegosMenu);
+}
+if (cerrarMenuBtn) {
+    cerrarMenuBtn.addEventListener('click', toggleJuegosMenu);
+}
+document.addEventListener('click', (event) => {
+    if (!juegosDropdown) return;
+    const isClickInside = juegosDropdown.contains(event.target) || (menuToggleBtn && menuToggleBtn.contains(event.target));
+    
+    if (!isClickInside && !juegosDropdown.classList.contains('hidden-dropdown')) {
+        juegosDropdown.classList.add('hidden-dropdown');
+    }
+});
+
 
 // =======================================================================
 // 1. ESCUCHAR Y RENDERIZAR MENSAJES
@@ -98,21 +135,24 @@ function renderMemories(memories) {
 // 2. AJUSTES DE INTERACCIÓN PARA CÁMARA (LÓGICA DOBLE INPUT)
 // =======================================================================
 
-// 1. Mostrar el nombre del archivo capturado por Foto
-fileInputPhoto.addEventListener('change', () => {
-    fileNameDisplay.textContent = fileInputPhoto.files.length > 0 
-        ? `Foto capturada: ${fileInputPhoto.files[0].name}` 
-        : '';
-    fileInputVideo.value = ''; // Limpiar el otro input
-});
+// 💡 CORRECCIÓN CRÍTICA: Solo añadir event listeners si los elementos existen
+if (fileInputPhoto) {
+    fileInputPhoto.addEventListener('change', () => {
+        fileNameDisplay.textContent = fileInputPhoto.files.length > 0 
+            ? `Foto capturada: ${fileInputPhoto.files[0].name}` 
+            : '';
+        if (fileInputVideo) fileInputVideo.value = ''; // Limpiar el otro input
+    });
+}
 
-// 2. Mostrar el nombre del archivo capturado por Video
-fileInputVideo.addEventListener('change', () => {
-    fileNameDisplay.textContent = fileInputVideo.files.length > 0 
-        ? `Video capturado: ${fileInputVideo.files[0].name}` 
-        : '';
-    fileInputPhoto.value = ''; // Limpiar el otro input
-});
+if (fileInputVideo) {
+    fileInputVideo.addEventListener('change', () => {
+        fileNameDisplay.textContent = fileInputVideo.files.length > 0 
+            ? `Video capturado: ${fileInputVideo.files[0].name}` 
+            : '';
+        if (fileInputPhoto) fileInputPhoto.value = ''; // Limpiar el otro input
+    });
+}
 
 
 // =======================================================================
@@ -125,11 +165,11 @@ form.addEventListener('submit', async (e) => {
     const name = nameInput.value.trim().substring(0, 30);
     const message = messageInput.value.trim();
     
-    // 🚨 Determinar qué input contiene el archivo
+    // Determinar qué input contiene el archivo
     let file = null;
-    if (fileInputPhoto.files.length > 0) {
+    if (fileInputPhoto && fileInputPhoto.files.length > 0) {
         file = fileInputPhoto.files[0];
-    } else if (fileInputVideo.files.length > 0) {
+    } else if (fileInputVideo && fileInputVideo.files.length > 0) {
         file = fileInputVideo.files[0];
     }
     
@@ -207,8 +247,9 @@ form.addEventListener('submit', async (e) => {
         progressBarContainer.classList.add('hidden');
         progressBar.style.width = '0%';
         submitButton.disabled = false;
-        fileInputPhoto.value = '';
-        fileInputVideo.value = '';
+        // Limpiar los inputs de archivo después de subir
+        if (fileInputPhoto) fileInputPhoto.value = '';
+        if (fileInputVideo) fileInputVideo.value = '';
     }
 });
 
