@@ -12,7 +12,7 @@
 
 body {
     font-family: 'Poppins', sans-serif;
-    /* 🚨 Cambio a fondo primaveral suave */
+    /* Fondo primaveral suave */
     background: linear-gradient(135deg, #FFFDE7 0%, var(--spring-bg) 100%); 
     display: flex;
     justify-content: center;
@@ -23,14 +23,14 @@ body {
     transition: background 0.5s ease;
 }
 
-.quiz-container {
+.portal-container, .quiz-container {
     background: #ffffff; /* Fondo blanco puro */
     padding: 30px;
     border-radius: 25px; 
     /* Sombra suave y moderna (Efecto 'flotante') */
     box-shadow: 
-        0 15px 30px rgba(0, 0, 0, 0.1), /* Sombra principal ligera */
-        0 0 0 5px rgba(255, 204, 0, 0.1); /* Borde de resplandor amarillo suave */
+        0 15px 30px rgba(0, 0, 0, 0.1), 
+        0 0 0 5px rgba(255, 204, 0, 0.1); 
     width: 100%;
     max-width: 650px; 
     text-align: center;
@@ -45,6 +45,67 @@ h1 {
     text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
 }
 
+/* --- ESTILOS COMPARTIDOS DE RELIEVE Y BOTONES --- */
+.btn-portal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    font-weight: bold;
+    border-radius: 1.5rem;
+    /* 🚨 Transición suave para todos los movimientos */
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+    text-decoration: none;
+    box-shadow: 0 6px var(--honey-gold);
+    border: 2px solid var(--honey-gold);
+}
+.btn-portal:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px #e65100; /* Sombra más pronunciada al flotar */
+}
+.btn-portal:active {
+    transform: translateY(3px);
+    box-shadow: 0 2px #e65100;
+}
+
+/* Estilos de Botones Específicos */
+.btn-trivia {
+    background-color: var(--spring-green); 
+    color: white;
+    box-shadow: 0 4px var(--spring-shadow);
+    border-color: var(--spring-shadow);
+}
+.btn-trivia:hover {
+    box-shadow: 0 6px var(--spring-shadow);
+    background-color: #43A047;
+}
+.btn-messages {
+    background-color: var(--bee-yellow); 
+    color: var(--bee-black);
+    box-shadow: 0 4px #FF9800;
+}
+.btn-messages:hover {
+    box-shadow: 0 6px #FF9800;
+}
+
+/* 💡 ESTILOS DEL BOTÓN DE CÁMARA (Relieve) */
+.btn-file-label {
+    background-color: #EF4444; 
+    color: white;
+    box-shadow: 0 4px #c21a1a; 
+    transition: all 0.2s ease;
+}
+.btn-file-label:hover {
+    background-color: #dc2626;
+    box-shadow: 0 6px #c21a1a;
+    transform: translateY(-2px);
+}
+.btn-file-label:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px #c21a1a;
+}
 /* --- ESTILOS DEL MODO JUEGO (#player.html) --- */
 
 #quiz-header {
@@ -59,7 +120,7 @@ h1 {
     box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05); 
 }
 
-/* 💡 AJUSTE RESPONSIVE */
+/* AJUSTE RESPONSIVE */
 @media (max-width: 450px) {
     #quiz-header {
         flex-direction: column; 
@@ -72,66 +133,46 @@ h1 {
         font-size: 1.1em;
     }
 }
-
-.timer span, .score {
-    font-size: 1.2em;
-    font-weight: bold;
-}
-
-.timer span {
-    color: #e53935; 
-}
-
-#question {
-    color: #444;
-    font-size: 1.5em; 
-    font-weight: 600;
-    margin-bottom: 30px;
-    line-height: 1.4;
-}
-
-.options-container {
-    display: flex;
-    flex-direction: column;
-    gap: 12px; 
-}
-
+/* Botones de Opción de Trivia */
 .option-btn {
-    background-color: var(--honey-gold); 
-    color: white;
-    border: none;
-    padding: 15px 25px;
-    border-radius: 12px;
+    /* Estilos base del botón */
+    width: 100%;
+    padding: 12px 15px;
+    margin: 5px 0;
+    border-radius: 8px;
     font-size: 1.1em;
+    font-weight: bold;
     cursor: pointer;
-    /* 🚨 Transición suave para todos los cambios */
-    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
-    /* 🚨 Relieve/Sombra de Botón Presionable */
-    box-shadow: 0 6px var(--honey-gold); 
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    text-align: center;
+    
+    /* Tema Colmena (Yellow/Black) */
+    background-color: white; 
+    border: 2px solid var(--honey-gold);
+    color: var(--bee-black);
+    box-shadow: 0 4px var(--honey-gold); /* Sombra "presionable" */
 }
 
-/* Efecto Hover Moderno: Sube ligeramente y oscurece */
-.option-btn:hover {
-    background-color: #f57c00; /* Color ligeramente más oscuro */
+.option-btn:hover:not(:disabled) {
+    background-color: #ffc107; 
     transform: translateY(-3px);
-    box-shadow: 0 9px #e65100; /* Sombra más pronunciada al flotar */
+    box-shadow: 0 6px var(--honey-gold);
 }
 
-/* 🚨 Efecto al presionar (Active): Baja y la sombra se reduce */
 .option-btn:active {
-    transform: translateY(3px);
-    box-shadow: 0 2px #e65100;
+    transform: translateY(2px);
+    box-shadow: 0 2px var(--honey-gold);
 }
 
-/* Clases para feedback (mantener colores fuertes) */
-.correct {
+/* Feedback de Respuesta Correcta/Incorrecta */
+.option-btn.correct {
     background-color: var(--spring-green) !important; 
     box-shadow: 0 5px var(--spring-shadow) !important;
     transform: none !important;
 }
 
-.incorrect {
-    background-color: #e53935 !important; 
+.option-btn.incorrect {
+    background-color: #F44336 !important; 
     box-shadow: 0 5px #c62828 !important;
     transform: none !important;
 }
@@ -143,7 +184,7 @@ h1 {
     left: 0; 
     width: 100%;
     padding: 10px 20px;
-    background-color: #ffffff; /* Fondo blanco para aislarlo del contenido */
+    background-color: #ffffff; 
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1); 
     box-sizing: border-box;
     z-index: 1000; 
@@ -160,7 +201,6 @@ h1 {
     border-radius: 12px;
     font-size: 1.1em;
     cursor: pointer;
-    /* 🚨 Estilos de relieve */
     box-shadow: 0 6px var(--spring-shadow);
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
 }
@@ -175,120 +215,7 @@ h1 {
     transform: translateY(3px);
     box-shadow: 0 2px #388E3C; 
 }
-
 /* Padding para que el contenido no quede oculto detrás del botón fijo */
-.game-padding {
-    padding-bottom: 100px; 
-}
-
-
-/* Resultados Finales */
-.results-container {
-    margin-top: 30px;
-    padding: 40px;
-    border: none;
-    background: #fff8e1;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
-.results-container h2 {
-    color: var(--honey-gold);
-    font-size: 2em;
-    margin-bottom: 15px;
-}
-#final-score {
-    font-size: 1.5em;
-    font-weight: bold;
-    color: #333;
-    margin-top: 15px;
-}
-
-/* Botón Jugar de Nuevo */
-.results-container button {
-    background-color: var(--honey-gold);
-    color: white;
-    border: none;
-    padding: 12px 30px;
-    border-radius: 10px;
-    font-size: 1.1em;
-    cursor: pointer;
-    margin-top: 25px;
-    /* 🚨 Estilos de relieve */
-    box-shadow: 0 4px #e65100;
-    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-.results-container button:hover {
-    background-color: #f57c00;
-    transform: translateY(-2px);
-    box-shadow: 0 6px #e65100;
-}
-.results-container button:active {
-    transform: translateY(2px);
-    box-shadow: 0 2px #e65100;
-}
-
-/* --- ESTILOS DEL MODO ANFITRIÓN (host.html) --- */
-
-.admin-mode {
-    background: #fcfcfc;
-    border-color: var(--honey-gold);
-    text-align: left;
-}
-.save-btn, .clear-btn {
-    padding: 12px 20px;
-    border-radius: 8px;
-    font-weight: 600;
-}
-
-
-/* --- ESTILOS DE BOTONES DE OPCIÓN (Trivia) --- */
-
-<style>
-    /* DEFINICIÓN DE BOTÓN DE OPCIÓN */
-    .option-btn {
-        width: 100%;
-        padding: 12px 15px;
-        margin: 5px 0;
-        border-radius: 8px;
-        font-size: 1.1em;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        text-align: center;
-        
-        /* Tema Colmena (Yellow/Black) */
-        background-color: white; 
-        border: 2px solid var(--honey-gold);
-        color: var(--bee-black);
-        box-shadow: 0 4px var(--honey-gold); /* Sombra "presionable" */
-    }
-
-    .option-btn:hover:not(:disabled) {
-        background-color: #ffc107; 
-        transform: translateY(-3px);
-        box-shadow: 0 6px var(--honey-gold);
-    }
-
-    .option-btn:active {
-        transform: translateY(2px);
-        box-shadow: 0 2px var(--honey-gold);
-    }
-
-    /* Feedback de Respuesta Correcta */
-    .option-btn.correct {
-        background-color: var(--spring-green) !important; /* Verde sólido */
-        border-color: var(--spring-shadow) !important;
-        color: white;
-        box-shadow: 0 4px var(--spring-shadow) !important;
-        transform: none !important;
-    }
-
-    /* Feedback de Respuesta Incorrecta */
-    .option-btn.incorrect {
-        background-color: #F44336 !important; /* Rojo sólido */
-        border-color: #D32F2F !important;
-        color: white;
-        box-shadow: 0 4px #D32F2F !important;
-        transform: none !important;
-    }
-</style>
+.game-padding { padding-bottom: 100px; }
+.admin-mode { background: #fcfcfc; border-color: var(--honey-gold); text-align: left; }
+.save-btn, .clear-btn { padding: 12px 20px; border-radius: 8px; font-weight: 600; }
