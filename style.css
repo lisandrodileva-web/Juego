@@ -1,0 +1,247 @@
+/* --- ESTILOS GLOBALES Y CONTENEDOR --- */
+
+body {
+    font-family: 'Poppins', sans-serif; /* 👈 Fuente moderna y legible */
+    background: #f7e6a7; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+}
+
+.quiz-container {
+    background: #ffffff; /* Fondo blanco puro */
+    padding: 30px;
+    border-radius: 25px; /* Bordes más redondeados */
+    /* Sombra suave y moderna (Neumorfismo suave) */
+    box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.1), /* Sombra principal ligera */
+        0 0 0 5px rgba(255, 204, 0, 0.1); /* Borde de resplandor amarillo suave */
+    width: 100%;
+    max-width: 650px; /* Un poco más ancho */
+    text-align: center;
+    border: none; /* Eliminamos el borde duro */
+}
+
+h1 {
+    color: #333;
+    font-size: 2em; /* Título más grande */
+    font-weight: 700;
+    margin-bottom: 20px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+}
+
+/* --- ESTILOS DEL MODO JUEGO (#player.html) --- */
+
+#quiz-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding: 12px 20px;
+    background: #fff8e1; /* Color miel suave */
+    border-radius: 15px;
+    border: none;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05); /* Sombra interna sutil */
+}
+
+/* 💡 AJUSTE RESPONSIVE: Apilar el encabezado en pantallas móviles */
+@media (max-width: 450px) {
+    #quiz-header {
+        flex-direction: column; 
+        gap: 8px; 
+        padding: 10px;
+    }
+    .timer, .score, #player-name-display {
+        width: 100%; /* Ocupar todo el ancho para centrar/alinear */
+        text-align: center;
+        font-size: 1.1em;
+    }
+}
+
+.timer span, .score {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.timer span {
+    color: #e53935; 
+}
+
+#question {
+    color: #444;
+    font-size: 1.5em; /* Pregunta más prominente */
+    font-weight: 600;
+    margin-bottom: 30px;
+    line-height: 1.4;
+}
+
+.options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Espaciado ajustado */
+}
+
+.option-btn {
+    background-color: #ffb300; /* Amarillo Abeja */
+    color: white;
+    border: none;
+    padding: 15px 25px;
+    border-radius: 12px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out; /* Transición más suave */
+    box-shadow: 0 5px #e69900; /* Sombra de botón 'presionable' */
+}
+
+/* Efecto Hover Moderno: Sube ligeramente y oscurece */
+.option-btn:hover {
+    background-color: #ff9900;
+    transform: translateY(-2px);
+    box-shadow: 0 7px #e69900; 
+}
+
+/* Efecto al presionar (Active) */
+.option-btn:active {
+    transform: translateY(3px);
+    box-shadow: 0 2px #e69900;
+}
+
+/* Clases para feedback (mantener colores fuertes) */
+.correct {
+    background-color: #4caf50 !important; 
+    box-shadow: 0 5px #388e3c !important;
+    transform: none !important;
+}
+
+.incorrect {
+    background-color: #e53935 !important; 
+    box-shadow: 0 5px #c62828 !important;
+    transform: none !important;
+}
+
+/* Botón Siguiente */
+#next-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 12px;
+    font-size: 1em;
+    cursor: pointer;
+    margin-top: 30px;
+    transition: background-color 0.2s;
+    box-shadow: 0 4px #0056b3;
+}
+#next-btn:hover {
+    background-color: #0056b3;
+}
+
+/* Resultados Finales */
+.results-container {
+    margin-top: 30px;
+    padding: 40px;
+    border: none;
+    background: #fff8e1;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+.results-container h2 {
+    color: #e69900;
+    font-size: 2em;
+    margin-bottom: 15px;
+}
+#final-score {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #333;
+    margin-top: 15px;
+}
+
+/* Botón Jugar de Nuevo */
+.results-container button {
+    background-color: #ffb300;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 10px;
+    font-size: 1.1em;
+    cursor: pointer;
+    margin-top: 25px;
+    box-shadow: 0 4px #e69900;
+    transition: transform 0.2s;
+}
+.results-container button:hover {
+    background-color: #ff9900;
+    transform: translateY(-1px);
+}
+
+/* --- ESTILOS DEL MODO ANFITRIÓN (index.html) --- */
+
+.admin-mode {
+    background: #fcfcfc;
+    border-color: #e69900;
+    text-align: left;
+}
+/* ... otros estilos del formulario y lista de preguntas mantienen la coherencia ... */
+.save-btn, .clear-btn {
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+
+<style>
+    /* ... tus estilos de Tailwind ... */
+
+    /* DEFINICIÓN DE BOTÓN DE OPCIÓN */
+    .option-btn {
+        /* Estilos base del botón */
+        width: 100%;
+        padding: 12px 15px;
+        margin: 5px 0;
+        border-radius: 8px;
+        font-size: 1.1em;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+        
+        /* Tema Colmena (Yellow/Black) */
+        background-color: white; 
+        border: 2px solid var(--honey-gold);
+        color: var(--bee-black);
+        box-shadow: 0 4px var(--honey-gold); /* Sombra "presionable" */
+    }
+
+    .option-btn:hover:not(:disabled) {
+        background-color: #ffc107; /* Amarillo más intenso al pasar el mouse */
+        transform: translateY(-2px);
+        box-shadow: 0 6px var(--honey-gold);
+    }
+
+    .option-btn:active {
+        transform: translateY(2px);
+        box-shadow: 0 2px var(--honey-gold);
+    }
+
+    /* Feedback de Respuesta Correcta */
+    .option-btn.correct {
+        background-color: #4CAF50 !important; /* Verde sólido */
+        border-color: #388E3C !important;
+        color: white;
+        box-shadow: 0 4px #388E3C !important;
+        transform: none !important;
+    }
+
+    /* Feedback de Respuesta Incorrecta */
+    .option-btn.incorrect {
+        background-color: #F44336 !important; /* Rojo sólido */
+        border-color: #D32F2F !important;
+        color: white;
+        box-shadow: 0 4px #D32F2F !important;
+        transform: none !important;
+    }
+</style>
