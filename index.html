@@ -75,7 +75,7 @@
         .file-input-wrapper {
             position: relative;
             overflow: hidden;
-            display: inline-block;
+            display: block; /* Cambio a block para ocupar todo el ancho */
             margin: 5px 0;
             width: 100%;
         }
@@ -176,23 +176,13 @@
                 
                 <div class="flex flex-col items-center space-y-2">
                     
-                    <div class="flex space-x-2 w-full">
-                        
-                        <div class="file-input-wrapper w-1/2">
-                            <label for="guest-file-photo" class="btn-file-label">
-                                <span class="mr-1">📸</span> Capturar Foto
-                            </label>
-                            <input type="file" id="guest-file-photo" 
-                                   accept="image/*" 
-                                   capture="camera"> </div>
-                        
-                        <div class="file-input-wrapper w-1/2">
-                            <label for="guest-file-video" class="btn-file-label">
-                                <span class="mr-1">🎥</span> Capturar Video
-                            </label>
-                            <input type="file" id="guest-file-video" 
-                                   accept="video/*" 
-                                   capture="camcorder"> </div>
+                    <div class="file-input-wrapper">
+                        <label for="guest-file" class="btn-file-label">
+                            <span class="mr-1">📸🎥</span> Capturar Foto o Video
+                        </label>
+                        <input type="file" id="guest-file" 
+                               accept="image/*,video/*" 
+                               capture="environment"> 
                     </div>
                            
                     <p id="file-name-display" class="text-sm text-gray-600 italic mt-2"></p>
