@@ -7,15 +7,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        /* Estilos personalizados para la temática de la Abejita */
+        /* Estilos personalizados para la temática de la Abejita (Se usan las variables de style.css) */
         :root {
-            --bee-yellow: #FACC15; /* Tailwind yellow-400 */
-            --bee-black: #1F2937; /* Tailwind gray-800 */
-            --honey-gold: #F59E0B; /* Tailwind amber-500 */
+            --bee-yellow: #FFC107; 
+            --bee-black: #212529; 
+            --honey-gold: #FF9800; 
+            --spring-green: #66BB6A; 
+            --spring-shadow: #388E3C;
         }
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--bee-yellow); 
+            /* El background se define en style.css */
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -39,6 +41,7 @@
             margin-bottom: 0.5rem;
             line-height: 1.1;
         }
+        /* Botones y Estilos de Relieve copiados de style.css para consistencia */
         .btn-portal {
             display: flex;
             align-items: center;
@@ -64,18 +67,23 @@
         
         /* Estilos específicos para botones */
         .btn-trivia {
-            background-color: #4CAF50; /* Verde para Jugar */
+            background-color: var(--spring-green); 
             color: white;
-            box-shadow: 0 4px #388E3C;
+            box-shadow: 0 4px var(--spring-shadow);
         }
         .btn-trivia:hover {
-            box-shadow: 0 6px #388E3C;
+            box-shadow: 0 6px var(--spring-shadow);
         }
         .btn-messages {
-            background-color: #FFC107; /* Amarillo Brillante */
+            background-color: var(--bee-yellow); 
             color: var(--bee-black);
+            box-shadow: 0 4px #FF9800;
         }
-        /* 💡 ESTILOS DEL BOTÓN DE MENÚ ÚNICO */
+        .btn-messages:hover {
+            box-shadow: 0 6px #FF9800;
+        }
+
+        /* 💡 ESTILOS DEL BOTÓN DE MENÚ ÚNICO (Relieve) */
         .btn-menu-toggle {
             background-color: var(--bee-black);
             color: var(--bee-yellow);
@@ -89,11 +97,16 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 1.5rem; /* Separación del resto del contenido */
+            margin-bottom: 1.5rem; 
+            transition: all 0.2s ease;
         }
         .btn-menu-toggle:hover {
             box-shadow: 0 7px #374151;
             transform: translateY(-2px);
+        }
+        .btn-menu-toggle:active {
+            box-shadow: 0 2px #374151;
+            transform: translateY(2px);
         }
         
         /* 🚨 ESTILOS DEL MENÚ FLOTANTE (DROPDOWN) */
@@ -124,7 +137,6 @@
             overflow: hidden;
             display: block; 
             width: 100%;
-            /* 🚨 Ajuste para el espaciado de la columna */
             margin-bottom: 8px; 
         }
         .file-input-wrapper input[type=file] {
@@ -146,46 +158,27 @@
             border-radius: 1.5rem;
             background-color: #EF4444; 
             color: white;
-            box-shadow: 0 4px #b91c1c; 
+            /* 🚨 Relieve de Botón Cámara */
+            box-shadow: 0 4px #c21a1a; 
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
         }
         .btn-file-label:hover {
             background-color: #dc2626;
-            box-shadow: 0 6px #b91c1c;
+            box-shadow: 0 6px #c21a1a;
             transform: translateY(-2px);
         }
-
-        /* Estilo para el área de mensajes */
+        .btn-file-label:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px #c21a1a;
+        }
+        /* Estilos internos de recuerdo y progreso */
         .memory-card {
-            border: 1px solid #e5e7eb;
-            background-color: #f9fafb;
-            padding: 1rem;
-            border-radius: 0.75rem;
-            margin-bottom: 0.75rem;
-            text-align: left;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e5e7eb; background-color: #f9fafb; padding: 1rem; border-radius: 0.75rem; margin-bottom: 0.75rem; text-align: left; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
-
-        /* Barra de progreso */
-        #upload-progress-bar {
-            height: 10px;
-            border-radius: 5px;
-            background-color: #e0e0e0;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-        #upload-progress-bar div {
-            height: 100%;
-            width: 0%;
-            background-color: #4CAF50; /* Verde de progreso */
-            transition: width 0.3s ease;
-        }
-
-        /* Asegurar la responsividad de los inputs */
-        .input-bee, .textarea-bee {
-            box-sizing: border-box;
-        }
+        #upload-progress-bar { height: 10px; border-radius: 5px; background-color: #e0e0e0; overflow: hidden; margin-top: 10px; }
+        #upload-progress-bar div { height: 100%; width: 0%; background-color: var(--spring-green); transition: width 0.3s ease; }
+        .input-bee, .textarea-bee { box-sizing: border-box; }
     </style>
 </head>
 <body class="p-4 sm:p-8">
