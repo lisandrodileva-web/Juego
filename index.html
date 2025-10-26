@@ -98,11 +98,11 @@
         
         /* 🚨 ESTILOS DEL MENÚ FLOTANTE (DROPDOWN) */
         #juegos-dropdown {
-            position: absolute; /* Posicionamiento flotante */
-            top: 20px; /* Ajustar posición dentro del contenedor */
+            position: absolute; 
+            top: 20px; 
             left: 50%;
-            transform: translateX(-50%); /* Centrar horizontalmente */
-            z-index: 50; /* Para que esté sobre el contenido */
+            transform: translateX(-50%); 
+            z-index: 50; 
             background-color: white;
             border: 4px solid var(--honey-gold);
             border-radius: 1rem;
@@ -123,8 +123,9 @@
             position: relative;
             overflow: hidden;
             display: block; 
-            margin: 5px 0;
             width: 100%;
+            /* 🚨 Ajuste para el espaciado de la columna */
+            margin-bottom: 8px; 
         }
         .file-input-wrapper input[type=file] {
             position: absolute;
@@ -181,10 +182,6 @@
             transition: width 0.3s ease;
         }
 
-        /* Ocultar inputs de archivo por defecto */
-        #guest-file-photo, #guest-file-video {
-            display: none;
-        }
         /* Asegurar la responsividad de los inputs */
         .input-bee, .textarea-bee {
             box-sizing: border-box;
