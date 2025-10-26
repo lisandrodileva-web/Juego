@@ -71,12 +71,41 @@
             background-color: #FFC107; /* Amarillo Brillante */
             color: var(--bee-black);
         }
-        .btn-camera {
-            background-color: #EF4444; /* Rojo para cámara */
-            color: white;
+        /* 💡 ESTILO DIRECTO DE INPUT DE CÁMARA (SIMULA UN BOTÓN) */
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            margin: 5px 0;
+            width: 100%;
+        }
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            height: 100%;
+            width: 100%;
+        }
+        .btn-file-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
             padding: 0.75rem;
-            font-size: 0.9em;
-            margin-top: 5px;
+            font-weight: bold;
+            border-radius: 1.5rem;
+            background-color: #EF4444; 
+            color: white;
+            box-shadow: 0 4px #b91c1c; 
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-file-label:hover {
+            background-color: #dc2626;
+            box-shadow: 0 6px #b91c1c;
+            transform: translateY(-2px);
         }
 
         /* Estilo para el área de mensajes */
@@ -105,10 +134,6 @@
             transition: width 0.3s ease;
         }
 
-        /* Ocultar input de archivo por defecto */
-        #guest-file {
-            display: none;
-        }
         /* Asegurar la responsividad de los inputs */
         .input-bee, .textarea-bee {
             box-sizing: border-box;
@@ -149,14 +174,27 @@
                           class="textarea-bee w-full p-3 border border-yellow-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 h-16 resize-none"></textarea>
 
                 
-                <div class="flex flex-col items-center">
-                    <button type="button" id="capture-btn" class="btn-portal btn-camera">
-                        <span id="capture-icon" class="mr-2">📸</span> Tomar Foto o Grabar Video
-                    </button>
-                    <input type="file" id="guest-file" 
-                           capture="environment" 
-                           accept="image/*,video/*">
-
+                <div class="flex flex-col items-center space-y-2">
+                    
+                    <div class="flex space-x-2 w-full">
+                        
+                        <div class="file-input-wrapper w-1/2">
+                            <label for="guest-file-photo" class="btn-file-label">
+                                <span class="mr-1">📸</span> Capturar Foto
+                            </label>
+                            <input type="file" id="guest-file-photo" 
+                                   accept="image/*" 
+                                   capture="camera"> </div>
+                        
+                        <div class="file-input-wrapper w-1/2">
+                            <label for="guest-file-video" class="btn-file-label">
+                                <span class="mr-1">🎥</span> Capturar Video
+                            </label>
+                            <input type="file" id="guest-file-video" 
+                                   accept="video/*" 
+                                   capture="camcorder"> </div>
+                    </div>
+                           
                     <p id="file-name-display" class="text-sm text-gray-600 italic mt-2"></p>
                 </div>
 
