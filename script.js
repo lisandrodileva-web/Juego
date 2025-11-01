@@ -23,7 +23,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
-const storage = getStorage(app); // --- NUEVO --- Inicializar Storage
+const storage = getStorage(app); 
 
 // Referencias de la Trivia
 const questionsRef = ref(database, 'questions'); 
@@ -42,8 +42,9 @@ let playerName = 'Jugador Anónimo';
 let timeBonusTotal = 0; 
 let totalTime = 0; 
 
+
 // =======================================================================
-// FUNCIONES DE UTILIDAD
+// FUNCIONES DE UTILIDAD (TRIVIA)
 // =======================================================================
 
 function fixFirebaseArray(data) {
@@ -59,6 +60,7 @@ function fixFirebaseArray(data) {
 
 function listenForQuestions(callback) {
     onValue(questionsRef, (snapshot) => {
+        const data = snapshot.val();
         quizQuestions = [];
         if (data) {
             Object.keys(data).forEach(key => {
@@ -71,7 +73,7 @@ function listenForQuestions(callback) {
             });
         }
         console.log(`[Firebase] Preguntas cargadas: ${quizQuestions.length}`);
-        callback();
+        if (callback) callback();
     });
 }
 
@@ -92,9 +94,6 @@ function saveFinalResult(data) {
 // --- NUEVO --- FUNCIONES DE ALMACENAMIENTO (JUEGO DE MEMORIA)
 // =======================================================================
 
-/**
- * Sube los archivos de imágenes seleccionados a Firebase Storage.
- */
 async function uploadMemoryImages(files, progressCallback, statusCallback) {
     const uploadPromises = [];
 
@@ -111,7 +110,7 @@ async function uploadMemoryImages(files, progressCallback, statusCallback) {
             uploadTask.on('state_changed', 
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    progressCallback(progress); // Actualiza la barra de progreso
+                    progressCallback(progress); 
                 }, 
                 (error) => {
                     console.error("Error de subida:", error);
@@ -119,13 +118,11 @@ async function uploadMemoryImages(files, progressCallback, statusCallback) {
                 }, 
                 async () => {
                     const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    // Guardamos la URL y la ruta de storage para poder borrarla después
                     const imageData = {
                         url: downloadURL,
-                        storagePath: sRef.fullPath, // Ej: "memory_game_images/12345-foto.png"
+                        storagePath: sRef.fullPath, 
                         name: file.name
                     };
-                    // Guardamos la info de la imagen en la Realtime Database
                     await push(memoryImagesRef, imageData);
                     resolve(imageData);
                 }
@@ -134,14 +131,10 @@ async function uploadMemoryImages(files, progressCallback, statusCallback) {
         uploadPromises.push(uploadPromise);
     }
     
-    // Espera a que todas las subidas terminen
     await Promise.all(uploadPromises);
     statusCallback("¡Todas las imágenes se subieron con éxito!");
 }
 
-/**
- * Escucha cambios en la lista de imágenes de memoria y las renderiza.
- */
 function listenForMemoryImages(renderCallback) {
     onValue(memoryImagesRef, (snapshot) => {
         const images = [];
@@ -157,9 +150,6 @@ function listenForMemoryImages(renderCallback) {
     });
 }
 
-/**
- * Borra todas las imágenes del juego de memoria (de Storage y Database).
- */
 async function clearAllMemoryImages() {
     const snapshot = await get(memoryImagesRef);
     if (!snapshot.exists()) {
@@ -178,7 +168,7 @@ async function clearAllMemoryImages() {
 
     try {
         await Promise.all(deletePromises);
-        await remove(memoryImagesRef); // Borra toda la lista de la Database
+        await remove(memoryImagesRef); 
         alert("Se eliminaron todas las imágenes correctamente.");
     } catch (error) {
         console.error("Error al borrar imágenes:", error);
@@ -186,16 +176,11 @@ async function clearAllMemoryImages() {
     }
 }
 
-/**
- * Borra una sola imagen (de Storage y Database).
- */
 async function deleteSingleMemoryImage(id, storagePath) {
     try {
-        // Borrar de Storage
         const sRef = storageRef(storage, storagePath);
         await deleteObject(sRef);
         
-        // Borrar de Realtime Database
         const dbImgRef = ref(database, `memoryImages/${id}`);
         await remove(dbImgRef);
     } catch (error) {
@@ -204,9 +189,6 @@ async function deleteSingleMemoryImage(id, storagePath) {
     }
 }
 
-/**
- * Escucha los rankings del juego de memoria y los renderiza.
- */
 function listenForMemoryRankings(renderCallback) {
     onValue(memoryRankingsRef, (snapshot) => {
         const results = [];
@@ -224,20 +206,6 @@ function listenForMemoryRankings(renderCallback) {
 
 
 // =======================================================================
-// DETECCIÓN DE MODO Y MAIN
-// =======================================================================
-
-const isHostPage = document.title.includes('Anfitrión');
-
-if (isHostPage) {
-    initializeHost();
-} else {
-    // Si no es Host, asumimos que es Player.
-    // La lógica de `initializePlayer()` se mantiene al final de este archivo.
-    initializePlayer();
-}
-
-// =======================================================================
 // MODO ANFITRIÓN (host.html)
 // =======================================================================
 
@@ -248,7 +216,6 @@ function initializeHost() {
     const clearAllBtn = document.getElementById('clear-all-btn');
     const rankingContainer = document.getElementById('ranking-list');
 
-    // Escuchar cambios en las preguntas Y en el ranking de la trivia
     listenForQuestions(renderQuestionsList);
     listenForRankings(); 
 
@@ -359,12 +326,12 @@ function initializeHost() {
             li.style.alignItems = 'center';
             li.innerHTML = `
                 <div style="font-weight: bold; display: flex; align-items: center;">
-                    <span style="font-size: 1.2em; width: 30px; ...">${index + 1}.</span>
+                    <span style="font-size: 1.2em; width: 30px;">${index + 1}.</span>
                     <span>${r.name}</span>
                 </div>
                 <div style="text-align: right;">
                     <span style="font-weight: bold; color: #e69900;">${r.score} pts</span>
-                    <span style="font-size: 0.9em; color: #666; ...">(${r.time}s usados)</span>
+                    <span style="font-size: 0.9em; color: #666;">(${r.time}s usados)</span>
                 </div>
             `;
             rankingContainer.appendChild(li);
@@ -372,7 +339,7 @@ function initializeHost() {
     }
 
     // --------------------------------------------------
-    // --- NUEVO --- Lógica del JUEGO DE MEMORIA
+    // --- Lógica del JUEGO DE MEMORIA
     // --------------------------------------------------
     const memoryForm = document.getElementById('memory-image-form');
     const memoryFilesInput = document.getElementById('memory-files');
@@ -386,11 +353,9 @@ function initializeHost() {
     const progressStatus = document.getElementById('memory-upload-status');
     const saveMemoryBtn = document.getElementById('save-memory-images-btn');
 
-    // Escuchar por imágenes y rankings del juego de memoria
     listenForMemoryImages(renderMemoryImagesList);
     listenForMemoryRankings(renderMemoryRanking);
 
-    // Manejar subida de imágenes
     memoryForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const files = memoryFilesInput.files;
@@ -428,14 +393,12 @@ function initializeHost() {
         }
     });
 
-    // Manejar borrado de todas las imágenes
     clearMemoryImagesBtn.addEventListener('click', () => {
         if (confirm('¿Estás seguro de que quieres ELIMINAR TODAS las imágenes del juego de memoria? Esta acción no se puede deshacer.')) {
             clearAllMemoryImages();
         }
     });
 
-    // Manejar borrado de una sola imagen (usando delegación de eventos)
     memoryImagesList.addEventListener('click', async (e) => {
         if (e.target.classList.contains('delete-btn')) {
             const id = e.target.dataset.id;
@@ -446,7 +409,6 @@ function initializeHost() {
         }
     });
 
-    // Renderizar la lista de imágenes cargadas
     function renderMemoryImagesList(images) {
         memoryImagesList.innerHTML = '';
         if (images.length === 0) {
@@ -458,7 +420,7 @@ function initializeHost() {
         clearMemoryImagesBtn.classList.remove('hidden');
         images.forEach(img => {
             const li = document.createElement('li');
-            li.className = 'question-item image-preview-item'; // Reutiliza estilo
+            li.className = 'question-item image-preview-item'; 
             li.innerHTML = `
                 <img src="${img.url}" alt="${img.name}">
                 <span class="q-display text-sm truncate">${img.name}</span>
@@ -473,9 +435,7 @@ function initializeHost() {
         });
     }
 
-    // Renderizar el ranking del juego de memoria
     function renderMemoryRanking(results) {
-        // Ordenar por tiempo (ascendente: menor tiempo es mejor)
         results.sort((a, b) => a.time - b.time); 
 
         memoryRankingContainer.innerHTML = '';
@@ -486,13 +446,13 @@ function initializeHost() {
 
         results.forEach((r, index) => {
             const li = document.createElement('li');
-            li.className = `question-item ${index === 0 ? 'top-winner' : ''}`; // Reutiliza estilo
+            li.className = `question-item ${index === 0 ? 'top-winner' : ''}`; 
             li.style.display = 'flex';
             li.style.justifyContent = 'space-between';
             li.style.alignItems = 'center';
             li.innerHTML = `
                 <div style="font-weight: bold; display: flex; align-items: center;">
-                    <span style="font-size: 1.2em; width: 30px; ...">${index + 1}.</span>
+                    <span style="font-size: 1.2em; width: 30px;">${index + 1}.</span>
                     <span>${r.name}</span>
                 </div>
                 <div style="text-align: right;">
@@ -510,7 +470,6 @@ function initializeHost() {
 // =======================================================================
 
 function initializePlayer() {
-    // Referencias a elementos de la interfaz
     const startForm = document.getElementById('start-form');
     const nameInput = document.getElementById('player-name-input');
     const nameDisplay = document.getElementById('player-name-display'); 
@@ -518,7 +477,6 @@ function initializePlayer() {
     const startButton = document.getElementById('start-game-btn');
     const noQuestionsMsg = document.getElementById('player-no-questions-msg');
     
-    // Elementos del juego 
     const scoreElement = document.getElementById('score'); 
     const scoreSpan = scoreElement ? scoreElement.querySelector('span') : null; 
     
@@ -528,7 +486,6 @@ function initializePlayer() {
     const questionElement = document.getElementById('question');
     const optionsContainer = document.getElementById('options-container');
     
-    // Referencias al botón fijo (CORREGIDO)
     const nextButtonContainer = document.getElementById('next-button-fixed-container'); 
     const nextButton = document.getElementById('next-btn'); 
 
@@ -537,8 +494,6 @@ function initializePlayer() {
     const resultsContainer = document.getElementById('results');
     const finalScoreElement = document.getElementById('final-score');
     
-    // Verifica si los elementos existen antes de agregar listeners
-    // Esto evita errores si este script se carga en memory.html (que no tiene estos IDs)
     if (startForm) {
         listenForQuestions(initializePlayerScreen);
 
@@ -606,7 +561,7 @@ function initializePlayer() {
             
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
-                handleAnswer(null); // Tiempo agotado
+                handleAnswer(null); 
             }
         }, 1000);
     }
@@ -697,3 +652,233 @@ function initializePlayer() {
         saveFinalResult(finalData);
     }
 }
+
+
+// =======================================================================
+// LÓGICA DEL JUEGO DE MEMORIA (memory.html)
+// =======================================================================
+
+let memoryGameImages = []; 
+let hasFlippedCard = false;
+let lockBoard = false;
+let firstCard, secondCard;
+let matchCount = 0;
+let memoryTimer = null;
+let secondsElapsed = 0;
+let memoryPlayerName = '';
+
+// 1. Carga las URLs de Firebase y prepara el tablero
+async function setupMemoryGame() {
+    const gridContainer = document.getElementById('memory-game-grid');
+    if (!gridContainer) return;
+    gridContainer.innerHTML = 'Cargando imágenes...';
+    
+    try {
+        const snapshot = await get(memoryImagesRef);
+        if (!snapshot.exists()) {
+            gridContainer.innerHTML = '<p class="text-center text-red-500">Error: No se han cargado imágenes en el portal del anfitrión.</p>';
+            return;
+        }
+
+        const imagesObject = snapshot.val();
+        const imageUrls = Object.values(imagesObject).map(item => item.url);
+
+        if (imageUrls.length < 2) {
+            gridContainer.innerHTML = '<p class="text-center text-red-500">Se necesitan al menos 2 imágenes diferentes para jugar (mínimo 4 cartas).</p>';
+            return;
+        }
+
+        // Determinar el número de pares y ajustar la cuadrícula
+        const numPairs = Math.min(imageUrls.length, 8); // Máximo 8 pares (16 cartas)
+        const totalCards = numPairs * 2;
+        const columns = Math.ceil(Math.sqrt(totalCards));
+        gridContainer.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+        
+        const pairImages = imageUrls.slice(0, numPairs); 
+        memoryGameImages = [...pairImages, ...pairImages];
+        shuffle(memoryGameImages);
+
+        gridContainer.innerHTML = ''; 
+
+        memoryGameImages.forEach((url, index) => {
+            const card = document.createElement('div');
+            card.classList.add('card');
+            card.setAttribute('data-image', url);
+            card.dataset.index = index;
+            card.innerHTML = `
+                <div class="card-face card-front">🐝</div>
+                <div class="card-face card-back"><img src="${url}" alt="Memoria ${index}"></div>
+            `;
+            card.addEventListener('click', flipCard);
+            gridContainer.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error("Error al cargar imágenes para el juego de memoria:", error);
+        gridContainer.innerHTML = '<p class="text-center text-red-500">Error al cargar el juego. Revisa la consola.</p>';
+    }
+}
+
+// 2. Lógica para voltear una carta
+function flipCard() {
+    if (lockBoard) return;
+    if (this === firstCard) return;
+
+    if (!memoryTimer && matchCount === 0) {
+        startMemoryTimer();
+    }
+
+    this.classList.add('flipped');
+
+    if (!hasFlippedCard) {
+        hasFlippedCard = true;
+        firstCard = this;
+        return;
+    }
+
+    secondCard = this;
+    checkForMatch();
+}
+
+// 3. Verificar si hay pareja
+function checkForMatch() {
+    const isMatch = firstCard.dataset.image === secondCard.dataset.image;
+
+    if (isMatch) {
+        disableCards();
+    } else {
+        unflipCards();
+    }
+}
+
+// 4. Bloquear las cartas si hay pareja
+function disableCards() {
+    firstCard.removeEventListener('click', flipCard);
+    secondCard.removeEventListener('click', flipCard);
+    
+    firstCard.classList.add('matched');
+    secondCard.classList.add('matched');
+    
+    matchCount++;
+    resetBoard();
+    
+    if (matchCount === memoryGameImages.length / 2) {
+        setTimeout(showMemoryResults, 1000);
+    }
+}
+
+// 5. Voltear las cartas si no hay pareja
+function unflipCards() {
+    lockBoard = true;
+
+    setTimeout(() => {
+        firstCard.classList.remove('flipped');
+        secondCard.classList.remove('flipped');
+        resetBoard();
+    }, 1000);
+}
+
+// 6. Reiniciar las variables de control
+function resetBoard() {
+    [hasFlippedCard, lockBoard] = [false, false];
+    [firstCard, secondCard] = [null, null];
+}
+
+// 7. Manejo del temporizador
+function startMemoryTimer() {
+    const timerDisplay = document.querySelector('#timer span');
+    secondsElapsed = 0;
+    if (timerDisplay) timerDisplay.textContent = secondsElapsed;
+
+    memoryTimer = setInterval(() => {
+        secondsElapsed++;
+        if (timerDisplay) timerDisplay.textContent = secondsElapsed;
+    }, 1000);
+}
+
+function stopMemoryTimer() {
+    clearInterval(memoryTimer);
+    memoryTimer = null;
+}
+
+// 8. Mostrar Resultados y Guardar en Firebase
+function showMemoryResults() {
+    stopMemoryTimer();
+    
+    const gameContainer = document.getElementById('game-mode-container');
+    const resultsContainer = document.getElementById('results');
+    const finalTimeElement = document.getElementById('final-time');
+
+    if (gameContainer) gameContainer.classList.add('hidden');
+    if (resultsContainer) resultsContainer.classList.remove('hidden');
+
+    if (finalTimeElement) finalTimeElement.textContent = `¡${memoryPlayerName}, completaste el juego en: ${secondsElapsed} segundos!`;
+    
+    const finalData = {
+        name: memoryPlayerName,
+        time: secondsElapsed, 
+        timestamp: Date.now()
+    };
+    push(memoryRankingsRef, finalData)
+        .then(() => console.log("Resultado de Memoria guardado con éxito."))
+        .catch(error => console.error("Error al guardar el resultado de Memoria:", error));
+}
+
+
+// 9. FUNCIÓN DE INICIALIZACIÓN GLOBAL para memory.html
+function initializeMemoryGame() {
+    const startScreen = document.getElementById('start-screen');
+    const gameContainer = document.getElementById('game-mode-container');
+    const startButton = document.getElementById('start-btn');
+    const nameInput = document.getElementById('player-name-input');
+    const nameDisplay = document.getElementById('player-name-display');
+
+    if (!startButton) return; // Salir si los elementos no están presentes
+
+    startButton.addEventListener('click', () => {
+        const name = nameInput.value.trim();
+        if (name.length > 0) {
+            memoryPlayerName = name;
+            if(nameDisplay) nameDisplay.textContent = `Jugador: ${memoryPlayerName}`;
+            
+            if (startScreen) startScreen.classList.add('hidden');
+            if (gameContainer) gameContainer.classList.remove('hidden');
+            
+            matchCount = 0;
+            secondsElapsed = 0;
+            stopMemoryTimer(); 
+            resetBoard(); 
+            setupMemoryGame();
+
+        } else {
+            alert('Por favor, ingresa tu nombre para comenzar.');
+        }
+    });
+}
+
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+
+// =======================================================================
+// INICIALIZACIÓN PRINCIPAL: DETECCIÓN DE PÁGINA (RESUELVE EL ERROR)
+// =======================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    const path = window.location.pathname;
+
+    // Detecta la página y llama a la única función de inicialización necesaria
+    if (path.includes('host.html')) {
+        initializeHost();
+    } else if (path.includes('player.html')) {
+        initializePlayer();
+    } else if (path.includes('memory.html')) {
+        // Llama a la lógica de inicialización del juego de memoria
+        initializeMemoryGame();
+    }
+});
