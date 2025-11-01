@@ -25,6 +25,124 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 
 // =======================================================================
+// FUNCIONES DE RECUPERACIÓN Y RENDERIZACIÓN DE RECUERDOS (NUEVAS)
+// =======================================================================
+
+/**
+ * Renderiza la lista de recuerdos en el contenedor del DOM.
+ * @param {Array} memories - Arreglo de objetos de recuerdo.
+ */
+function renderMemories(memories) {
+    const memoriesList = document.getElementById('memories-list');
+    if (!memoriesList) return;
+    
+    memoriesList.innerHTML = ''; // Limpia el contenido anterior
+
+    if (memories.length === 0) {
+        memoriesList.innerHTML = `
+            <p class="text-sm text-gray-500 italic p-2 text-center">
+                ¡Sé el primero en dejar un recuerdo para la Colmena!
+            </p>
+        `;
+        return;
+    }
+
+    memories.forEach(memory => {
+        const memoryItem = document.createElement('div');
+        // Clases de estilo de Tailwind/CSS
+        memoryItem.className = 'memory-item p-3 mb-3 border-b border-yellow-200 last:border-b-0'; 
+        
+        let mediaContent = '';
+        // Usar los campos de la DB: 'fileUrl' y 'fileType'
+        const fileUrl = memory.fileUrl || memory.mediaUrl; // Soporte para nombres antiguos
+        const fileType = memory.fileType || memory.mediaType; // Soporte para nombres antiguos
+
+        if (fileUrl) {
+            // Determina si es video o imagen
+            const isVideo = fileType && fileType.startsWith('video');
+            
+            if (isVideo) {
+                // Renderizar video
+                mediaContent = `
+                    <video controls src="${fileUrl}" 
+                           class="w-full h-auto max-h-48 object-cover rounded-lg shadow-md mt-2"
+                           preload="none" style="max-width: 100%;">
+                    </video>
+                `;
+            } else {
+                // Renderizar imagen
+                mediaContent = `
+                    <img src="${fileUrl}" 
+                         alt="Recuerdo de ${memory.name}" 
+                         class="w-full h-auto max-h-48 object-cover rounded-lg shadow-md mt-2"
+                         loading="lazy" style="max-width: 100%;">
+                `;
+            }
+        }
+        
+        // Formatear la fecha y hora
+        const date = memory.timestamp ? new Date(memory.timestamp) : new Date();
+        const formattedDate = date.toLocaleDateString('es-ES', { 
+            day: 'numeric', 
+            month: 'short', 
+            year: 'numeric' 
+        }) + ' ' + date.toLocaleTimeString('es-ES', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+
+        // Estructura HTML principal del recuerdo
+        memoryItem.innerHTML = `
+            <div class="flex items-start justify-between">
+                <p class="font-bold text-gray-800 text-sm">
+                    <span class="text-honey-gold">🐝</span> ${memory.name}
+                </p>
+                <p class="text-xs text-gray-500">${formattedDate}</p>
+            </div>
+            ${memory.message && memory.message.trim() ? `<p class="text-gray-600 mt-1 mb-2 text-sm">${memory.message}</p>` : ''}
+            ${mediaContent}
+        `;
+        
+        memoriesList.appendChild(memoryItem);
+    });
+}
+
+
+/**
+ * Escucha los cambios en la base de datos de Firebase y actualiza la lista de recuerdos.
+ */
+function listenForMemories() {
+    const memoriesList = document.getElementById('memories-list');
+    if (!memoriesList) return; // Asegura que el elemento existe
+    
+    // Configura la escucha en tiempo real (onValue)
+    onValue(memoriesRef, (snapshot) => {
+        const data = snapshot.val();
+        const memories = [];
+        
+        if (data) {
+            // 1. Convierte el objeto de Firebase en un array de recuerdos
+            for (let key in data) {
+                memories.push({ 
+                    id: key, 
+                    ...data[key] 
+                });
+            }
+            // 2. Ordena por marca de tiempo (timestamp) descendente (más recientes primero)
+            memories.sort((a, b) => b.timestamp - a.timestamp);
+        }
+
+        // 3. Renderiza la lista completa
+        renderMemories(memories);
+        
+    }, (error) => {
+        console.error("Error al escuchar los recuerdos:", error);
+        memoriesList.innerHTML = '<p class="text-sm text-red-500 italic">Error al cargar los recuerdos.</p>';
+    });
+}
+
+
+// =======================================================================
 // LÓGICA PRINCIPAL (EJECUTADA DESPUÉS DE CARGAR EL DOM)
 // =======================================================================
 
@@ -89,11 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // =======================================================================
-    // 1. ESCUCHAR Y RENDERIZAR MENSAJES (y demás lógica)
+    // LÓGICA DE ENVÍO DE MENSAJES
     // =======================================================================
     
-    // (Código de listenForMemories y renderMemories se mantiene igual, no es necesario duplicarlo aquí)
-
     // Lógica de escucha de cambios en los inputs de foto/video
     if (fileInputPhoto) {
         fileInputPhoto.addEventListener('change', () => {
@@ -142,8 +258,9 @@ document.addEventListener('DOMContentLoaded', () => {
             submitButton.disabled = true;
 
             try {
-                let mediaUrl = null;
-                let mediaType = null;
+                // CORRECCIÓN: Renombramos a 'fileUrl' y 'fileType' para consistencia con renderMemories
+                let fileUrl = null; 
+                let fileType = null; 
 
                 if (file) {
                     progressBarContainer.classList.remove('hidden');
@@ -168,19 +285,20 @@ document.addEventListener('DOMContentLoaded', () => {
                                 reject(error);
                             }, 
                             async () => {
-                                mediaUrl = await getDownloadURL(uploadTask.snapshot.ref);
-                                mediaType = file.type;
+                                fileUrl = await getDownloadURL(uploadTask.snapshot.ref); // Usamos fileUrl
+                                fileType = file.type; // Usamos fileType
                                 resolve();
                             }
                         );
                     });
                 }
 
+                // OBJETO ENVIADO A LA BASE DE DATOS
                 const newMemory = {
                     name: name,
                     message: message,
-                    mediaUrl: mediaUrl,
-                    mediaType: mediaType,
+                    fileUrl: fileUrl, // Usamos fileUrl
+                    fileType: fileType, // Usamos fileType
                     timestamp: Date.now()
                 };
 
@@ -205,13 +323,3 @@ document.addEventListener('DOMContentLoaded', () => {
     // Iniciar la escucha de mensajes al cargar la página
     listenForMemories();
 });
-
-// Nota: Las funciones listenForMemories y renderMemories deben estar accesibles globalmente si se llaman desde otros lugares.
-// Para mantener el código limpio, se asume que las definiciones completas de listenForMemories y renderMemories están en el archivo.
-
-// Definiciones de funciones de Firebase (Mantenidas fuera del DOMContentLoaded para simplificar la estructura)
-
-function listenForMemories() { /* ... (código original) ... */ }
-function renderMemories(memories) { /* ... (código original) ... */ }
-// Nota: Para fines de esta respuesta, se usan los cuerpos de las funciones originales del historial.
-// La versión final de portalScript.js que debes usar es la que contiene TODO el código de esta respuesta.
