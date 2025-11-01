@@ -8,14 +8,16 @@
     
     <style>
         /* Estilos específicos para la cuadrícula del juego de memoria */
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr); /* 4 columnas por defecto */
-            gap: 10px;
-            padding: 10px;
-            max-width: 420px; /* Para que no sea demasiado grande en escritorios */
-            margin: 20px auto;
-        }
+        /* Estilos específicos para la cuadrícula del juego de memoria */
+    .grid-container {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr); /* 4 columnas por defecto */
+        gap: 10px;
+        padding: 10px;
+        /* 💡 Aumentado el ancho máximo para dar más espacio a las cartas */
+        max-width: 500px; 
+        margin: 20px auto;
+    }
 
         /* 💡 SOLUCIÓN RÁPIDA: Ocultar los elementos de la cuadrícula por defecto 
            para evitar que se carguen desordenados antes del JS.
@@ -30,28 +32,31 @@
         }
 
         .card {
-            background-color: var(--honey-gold);
-            border: 3px solid var(--bee-black);
-            height: 90px;
-            border-radius: 10px;
-            cursor: pointer;
-            position: relative;
-            transform-style: preserve-3d;
-            transition: transform 0.6s ease-in-out;
-            touch-action: manipulation; /* Mejora el rendimiento en móviles */
-        }
+        background-color: var(--honey-gold);
+        border: 3px solid var(--bee-black);
+        /* 💡 AUMENTO CLAVE: La altura base de la carta pasa de 90px a 110px */
+        height: 110px; 
+        border-radius: 10px;
+        cursor: pointer;
+        position: relative;
+        transform-style: preserve-3d;
+        transition: transform 0.6s ease-in-out;
+        touch-action: manipulation;
+    }
         
         /* Aseguramos que las cartas se vean bien en pantallas pequeñas */
-        @media (max-width: 450px) {
-            .card {
-                height: 75px; /* Altura un poco menor */
-            }
+    @media (max-width: 450px) {
+        .card {
+            /* 💡 Ajuste para móvil: De 75px a 90px */
+            height: 90px; 
         }
-        @media (max-width: 350px) {
-            .card {
-                height: 65px; /* Altura para pantallas muy pequeñas */
-            }
+    }
+    @media (max-width: 350px) {
+        .card {
+            /* 💡 Ajuste para móvil muy pequeño: De 65px a 75px */
+            height: 75px; 
         }
+    }
 
         .card-inner {
             position: absolute;
@@ -80,19 +85,27 @@
             font-weight: bold;
         }
 
-        .card-front {
-            background-color: var(--bee-yellow);
-            color: var(--bee-black);
-            transform: rotateY(180deg);
-            padding: 5px;
-        }
+        /* ... Estilos para .card-inner, .card.flipped .card-inner, etc. ... */
+    
+    .card-front {
+        background-color: var(--bee-yellow);
+        color: var(--bee-black);
+        transform: rotateY(180deg);
+        /* 💡 Aseguramos que el padding interno no se coma espacio vital de la imagen */
+        padding: 2px; 
+    }
 
-        .card-front img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            border-radius: 5px;
-        }
+    .card-front img {
+        max-width: 100%;
+        max-height: 100%;
+        /* 💡 ELIMINADO: Quita 'object-fit: contain' si quieres que la imagen intente ocupar todo.
+           Si la quitas, la imagen puede estirarse si no tiene la misma proporción que la carta.
+           RECOMENDACIÓN: MANTENER 'contain' y sólo aumentar el tamaño de la carta.
+           Lo mantendremos.
+        */
+        object-fit: contain; 
+        border-radius: 5px;
+    }
 
         .card-back {
             background-color: var(--honey-gold);
