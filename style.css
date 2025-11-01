@@ -6,6 +6,7 @@
     --spring-green: #66BB6A;    /* Verde Hoja */
     --spring-shadow: #388E3C;   /* Sombra Verde Profunda */
     --spring-bg: #E8F5E9;       /* Fondo Blanco Verdoso Suave */
+    --bee-black-rgb: 33, 37, 41; /* Valor RGB para la sombra del texto */
 }
 
 /* --- ESTILOS GLOBALES Y CONTENEDOR --- */
@@ -24,24 +25,20 @@ body {
 }
 
 .portal-container, .quiz-container {
-    /* --- INICIO DE MODIFICACIÓN: FONDO DE IMAGEN DEL CONTENEDOR --- */
-    /* 1. Imagen de fondo */
-    /* ¡DEBES REEMPLAZAR [URL_DE_TU_IMAGEN_DE_GOOGLE_FOTOS] CON LA URL REAL! */
+    /* --- FONDO DE IMAGEN DEL CONTENEDOR (YA ESTÁ EN 0.4) --- */
     background-image: url('https://firebasestorage.googleapis.com/v0/b/juegos-cumple.firebasestorage.app/o/Imagen%20de%20fondo%2F_FDZ8403.jpg?alt=media&token=70872cb5-5033-48ae-9b1f-38ec124c40fe'); 
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     
-    /* 2. Capa semi-transparente blanca para mantener la legibilidad */
-   background-image: url('https://firebasestorage.googleapis.com/v0/b/juegos-cumple.firebasestorage.app/o/Imagen%20de%20fondo%2F_FDZ8403.jpg?alt=media&token=70872cb5-5033-48ae-9b1f-38ec124c40fe'); 
-    /* El valor 0.85 determina la opacidad del color blanco que se mezcla con la imagen */
-    /* --- FIN DE MODIFICACIÓN --- */
+    /* MODIFICACIÓN: Contenedor principal con alta transparencia para que el fondo se vea bien. */
+    background-color: rgba(255, 255, 255, 0.4); 
     
     padding: 30px;
     border-radius: 25px; 
     /* Sombra suave y moderna (Efecto 'flotante') */
     box-shadow: 
-        0 15px 30px rgba(0, 0, 0, 0.1), 
+        0 15px 30px rgba(0, 0, 0, 0.2), 
         0 0 0 5px rgba(255, 204, 0, 0.1); 
     width: 100%;
     max-width: 650px; 
@@ -54,8 +51,26 @@ h1 {
     font-size: 2em; 
     font-weight: 700;
     margin-bottom: 20px;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+    /* MEJORA: Sombra de texto BLANCA fuerte para visibilidad */
+    text-shadow: 1px 1px 4px rgba(255, 255, 255, 1), 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
+
+/* 💡 NUEVA CLASE PARA LA SECCIÓN DE RECUERDOS (Contenedor blanco que quieres transparente) */
+.memory-section-bg {
+    /* Fondo semi-transparente (80% de opacidad) */
+    background-color: rgba(255, 255, 255, 0.637); 
+    /* Backdrop filter opcional para efecto "vidrio esmerilado" */
+    backdrop-filter: blur(3px);
+}
+
+/* 💡 MEJORA: Estilo para títulos dentro de la sección de recuerdos */
+.memory-section-bg h2, .memory-section-bg h3 {
+    color: var(--bee-black);
+    font-weight: 800;
+    /* Sombra de texto CLARA para el título "Deja tu Recuerdo" */
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.8);
+}
+
 
 /* --- ESTILOS COMPARTIDOS DE RELIEVE Y BOTONES --- */
 .btn-portal {
@@ -217,11 +232,3 @@ h1 {
 .admin-mode { background: #fcfcfc; border-color: var(--honey-gold); text-align: left; }
 .save-btn, .clear-btn { padding: 12px 20px; border-radius: 8px; font-weight: 600; }
 
-/* --- Estilos para hacer el formulario de recuerdos transparente --- */
-.transparent-form {
-    background-color: rgba(255, 255, 255, 0.6); /* Blanco con 60% de opacidad */
-    /* Puedes ajustar el último valor (0.6) para más o menos transparencia */
-    border: 1px solid rgba(255, 204, 0, 0.3); /* Un borde suave que se mezcla con el tema */
-    backdrop-filter: blur(5px); /* Efecto de desenfoque detrás del formulario (estilo "vidrio esmerilado") */
-    /* -webkit-backdrop-filter: blur(5px); /* Para compatibilidad con algunos navegadores */
-}
