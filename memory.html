@@ -32,53 +32,92 @@
         /* Aseguramos que las cartas se vean bien en pantallas pequeñas */
         @media (max-width: 450px) {
             .card {
-                height: 80px;
+                height: 75px; /* Altura un poco menor */
+            }
+        }
+        @media (max-width: 350px) {
+            .card {
+                height: 65px; /* Altura para pantallas muy pequeñas */
             }
         }
 
-        .card.flipped {
+        .card-inner {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner {
             transform: rotateY(180deg);
         }
 
-        .card-face {
+        .card-front, .card-back {
+            position: absolute;
             width: 100%;
             height: 100%;
-            position: absolute;
             backface-visibility: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
-            border-radius: 8px;
+            border-radius: 7px;
+            box-sizing: border-box;
+            font-size: 2em;
+            font-weight: bold;
         }
 
         .card-front {
-            background-color: var(--honey-gold);
-            color: white;
-            font-size: 2em;
-            /* Ícono de abeja o colmena */
-            content: '🐝'; 
-        }
-
-        .card-back {
-            background-color: white;
+            background-color: var(--bee-yellow);
+            color: var(--bee-black);
             transform: rotateY(180deg);
+            padding: 5px;
         }
 
-        .card-back img {
-            max-width: 90%;
-            max-height: 90%;
+        .card-front img {
+            max-width: 100%;
+            max-height: 100%;
             object-fit: contain;
             border-radius: 5px;
         }
+
+        .card-back {
+            background-color: var(--honey-gold);
+            border: 3px solid var(--bee-black);
+            color: white;
+            font-size: 1.5em;
+        }
+
+        /* Estilo para los resultados */
+        .results-container h2 {
+            color: var(--honey-gold);
+            margin-bottom: 10px;
+            font-size: 1.8em;
+            font-weight: 900;
+        }
+        
     </style>
 </head>
 <body>
+    
     <div class="quiz-container">
+        
         <div id="start-screen" class="quiz-section">
             <h1 class="title">Juego de Memoria 🧠</h1>
             <p class="mb-4">Ingresa tu nombre para comenzar a encontrar las parejas:</p>
+            
+            <label for="player-name-input" style="display: block; font-weight: bold; margin-bottom: 5px;">Tu Nombre de Jugador:</label>
+
             <input type="text" id="player-name-input" class="text-input" placeholder="Tu Nombre" maxlength="20">
+            
             <button id="start-btn" class="save-btn mt-4">¡Comenzar!</button>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="window.location.href='index.html'" style="background: none; border: none; color: #666; font-size: 0.9em; cursor: pointer;">
+                    Volver al Portal
+                </button>
+            </div>
         </div>
 
         <div id="game-mode-container" class="quiz-section hidden">
@@ -95,11 +134,12 @@
         <div id="results" class="results-container hidden">
             <h2>✨ ¡Memoria Completada! ✨</h2>
             <p id="final-time">Tu tiempo fue de: 0 segundos</p>
-            <button onclick="window.location.href='index.html'" style="background: var(--honey-gold); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 10px;">Volver al Portal</button>
+            
+            <button onclick="window.location.href='index.html'" class="save-btn mt-4" style="background: var(--honey-gold);">Volver al Portal</button>
         </div>
     </div>
 
-    <script type="module" src="script.js"></script> 
-    
-    </body>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script type="module" src="script.js"></script>
+</body>
 </html>

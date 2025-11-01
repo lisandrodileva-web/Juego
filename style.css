@@ -24,7 +24,19 @@ body {
 }
 
 .portal-container, .quiz-container {
-    background: #ffffff; /* Fondo blanco puro */
+    /* --- INICIO DE MODIFICACIÓN: FONDO DE IMAGEN DEL CONTENEDOR --- */
+    /* 1. Imagen de fondo */
+    /* ¡DEBES REEMPLAZAR [URL_DE_TU_IMAGEN_DE_GOOGLE_FOTOS] CON LA URL REAL! */
+    background-image: url('https://firebasestorage.googleapis.com/v0/b/juegos-cumple.firebasestorage.app/o/Imagen%20de%20fondo%2F_FDZ8403.jpg?alt=media&token=70872cb5-5033-48ae-9b1f-38ec124c40fe'); 
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    
+    /* 2. Capa semi-transparente blanca para mantener la legibilidad */
+   background-image: url('https://firebasestorage.googleapis.com/v0/b/juegos-cumple.firebasestorage.app/o/Imagen%20de%20fondo%2F_FDZ8403.jpg?alt=media&token=70872cb5-5033-48ae-9b1f-38ec124c40fe'); 
+    /* El valor 0.85 determina la opacidad del color blanco que se mezcla con la imagen */
+    /* --- FIN DE MODIFICACIÓN --- */
+    
     padding: 30px;
     border-radius: 25px; 
     /* Sombra suave y moderna (Efecto 'flotante') */
@@ -204,3 +216,12 @@ h1 {
 .game-padding { padding-bottom: 100px; }
 .admin-mode { background: #fcfcfc; border-color: var(--honey-gold); text-align: left; }
 .save-btn, .clear-btn { padding: 12px 20px; border-radius: 8px; font-weight: 600; }
+
+/* --- Estilos para hacer el formulario de recuerdos transparente --- */
+.transparent-form {
+    background-color: rgba(255, 255, 255, 0.6); /* Blanco con 60% de opacidad */
+    /* Puedes ajustar el último valor (0.6) para más o menos transparencia */
+    border: 1px solid rgba(255, 204, 0, 0.3); /* Un borde suave que se mezcla con el tema */
+    backdrop-filter: blur(5px); /* Efecto de desenfoque detrás del formulario (estilo "vidrio esmerilado") */
+    /* -webkit-backdrop-filter: blur(5px); /* Para compatibilidad con algunos navegadores */
+}
