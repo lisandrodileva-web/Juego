@@ -232,3 +232,83 @@ h1 {
 .admin-mode { background: #fcfcfc; border-color: var(--honey-gold); text-align: left; }
 .save-btn, .clear-btn { padding: 12px 20px; border-radius: 8px; font-weight: 600; }
 
+/* 🚨 ESTILOS DEL CONTENEDOR MODAL/FLOTANTE */
+.modal-full-screen {
+    position: fixed; /* Lo hace flotar sobre todo */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.95); /* Fondo blanco semi-transparente */
+    z-index: 9999; /* Asegura que esté por encima de todo */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* Alinea el contenido hacia arriba */
+    align-items: center;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow-y: auto; /* Permite desplazamiento si el contenido es muy largo */
+}
+
+/* Contenedor interno para que se vea como una sección */
+.quiz-section-floating {
+    background-color: #ffffff;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 550px; /* Limita el ancho en pantallas grandes */
+    margin-top: 20px;
+}
+
+/* Ajuste específico para el grid dentro del modal */
+.modal-full-screen .grid-container {
+    max-width: none; /* Ignora el max-width para usar el ancho disponible */
+    margin: 10px auto;
+}
+/* Aseguramos que los botones de cierre funcionen */
+.close-btn:hover {
+    color: #F44336 !important;
+}
+
+/* RE-AJUSTE DE TAMAÑOS DE CARTA PARA MÓVILES */
+@media (max-width: 768px) {
+    /* La altura general se puede subir mucho más en móviles */
+    .modal-full-screen .card {
+        height: 140px; /* Altura más grande ahora que la pantalla es solo para el juego */
+    }
+    .modal-full-screen .grid-container {
+        /* Permite que el grid use un poco más de margen en el ancho */
+        max-width: 95%;
+        padding: 5px;
+    }
+}
+@media (max-width: 400px) {
+    .modal-full-screen .card {
+        height: 100px; /* Ajuste si la pantalla es muy pequeña */
+    }
+}
+
+/* 🚨 SOLUCIÓN PARA LA VISIBILIDAD DE LA IMAGEN EN EL VOLTEO */
+/* La clase 'card-face' se usa en el JS generado. Reforzamos su comportamiento 3D */
+.card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden; /* Esto oculta la cara cuando está girada 180 grados */
+    border-radius: 7px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.card-front {
+    /* La cara frontal debe estar girada inicialmente para ocultarse */
+    transform: rotateY(180deg);
+}
+
+.card-back {
+    /* La cara trasera es la que se ve inicialmente (no girada) */
+    transform: rotateY(0deg); 
+}
+/* FIN DE SOLUCIÓN VOLTEO */

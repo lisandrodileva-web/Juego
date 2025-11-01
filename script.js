@@ -838,13 +838,15 @@ function showMemoryResults() {
 // 9. FUNCIÓN DE INICIALIZACIÓN GLOBAL para memory.html
 function initializeMemoryGame() {
     const startScreen = document.getElementById('start-screen');
-    const gameContainer = document.getElementById('game-mode-container');
+    const modalGameContainer = document.getElementById('modal-memory-game'); // 🚨 NUEVO: El contenedor flotante
     const startButton = document.getElementById('start-btn');
     const nameInput = document.getElementById('player-name-input');
     const nameDisplay = document.getElementById('player-name-display');
+    const closeModalBtn = document.getElementById('close-modal-btn'); // 🚨 NUEVO: Botón para cerrar el modal
 
-    if (!startButton) return; // Salir si los elementos no están presentes
+    if (!startButton || !modalGameContainer) return; // Salir si los elementos necesarios no están presentes
 
+    // --- LÓGICA PARA INICIAR EL JUEGO (ABRIR MODAL) ---
     startButton.addEventListener('click', () => {
         const name = nameInput.value.trim();
         if (name.length > 0) {
@@ -852,7 +854,8 @@ function initializeMemoryGame() {
             if(nameDisplay) nameDisplay.textContent = `Jugador: ${memoryPlayerName}`;
             
             if (startScreen) startScreen.classList.add('hidden');
-            if (gameContainer) gameContainer.classList.remove('hidden');
+            // 🚨 MODIFICACIÓN: Mostramos el contenedor MODAL en lugar del contenedor interno
+            if (modalGameContainer) modalGameContainer.classList.remove('hidden'); 
             
             matchCount = 0;
             secondsElapsed = 0;
@@ -864,6 +867,19 @@ function initializeMemoryGame() {
             alert('Por favor, ingresa tu nombre para comenzar.');
         }
     });
+    
+    // --- LÓGICA PARA CERRAR EL MODAL Y VOLVER (BOTÓN 'X') ---
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', () => {
+            // Oculta el modal de juego
+            if (modalGameContainer) modalGameContainer.classList.add('hidden');
+            // Muestra la pantalla de inicio (formulario de nombre)
+            if (startScreen) startScreen.classList.remove('hidden');
+            // Detiene el temporizador si estaba corriendo
+            stopMemoryTimer();
+        });
+    }
+
 }
 
 function shuffle(array) {
@@ -876,7 +892,7 @@ function shuffle(array) {
 
 
 // =======================================================================
-// INICIALIZACIÓN PRINCIPAL: DETECCIÓN DE PÁGINA (RESUELVE EL ERROR)
+// INICIALIZACIÓN PRINCIPAL: DETECCIÓN DE PÁGINA (ESTO SE MANTIENE IGUAL)
 // =======================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
