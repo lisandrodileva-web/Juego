@@ -133,7 +133,7 @@ h1 {
 }
 
 /* AJUSTE RESPONSIVE */
-@media (max-width: 450px) {
+@media (max-width: 500px) {
     #quiz-header {
         flex-direction: column; 
         gap: 8px; 

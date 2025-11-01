@@ -673,7 +673,12 @@ async function setupMemoryGame() {
     if (!gridContainer) return;
     gridContainer.innerHTML = 'Cargando imágenes...';
     
+    // Una vez que la cuadrícula se carga, aseguramos que se muestre (si la ocultamos con CSS)
+    gridContainer.style.display = 'grid'; 
+    gridContainer.style.opacity = '1';
+
     try {
+        // 🚨 Es vital que estas herramientas de Firebase (get) estén importadas en script.js
         const snapshot = await get(memoryImagesRef);
         if (!snapshot.exists()) {
             gridContainer.innerHTML = '<p class="text-center text-red-500">Error: No se han cargado imágenes en el portal del anfitrión.</p>';
@@ -705,10 +710,15 @@ async function setupMemoryGame() {
             card.classList.add('card');
             card.setAttribute('data-image', url);
             card.dataset.index = index;
+            
+            // 🚨 CORRECCIÓN CLAVE: Estructura HTML para el giro 3D:
             card.innerHTML = `
-                <div class="card-face card-front">🐝</div>
-                <div class="card-face card-back"><img src="${url}" alt="Memoria ${index}"></div>
+                <div class="card-inner">
+                    <div class="card-face card-back">🐝</div>
+                    <div class="card-face card-front"><img src="${url}" alt="Memoria ${index}"></div>
+                </div>
             `;
+            
             card.addEventListener('click', flipCard);
             gridContainer.appendChild(card);
         });

@@ -17,6 +17,18 @@
             margin: 20px auto;
         }
 
+        /* 💡 SOLUCIÓN RÁPIDA: Ocultar los elementos de la cuadrícula por defecto 
+           para evitar que se carguen desordenados antes del JS.
+           Tu JS debe DEVOLVER VISIBLE el contenedor #memory-game-grid.
+        */
+        #memory-game-grid {
+            /* Ocultar inicialmente si tu JS no lo hace inmediatamente */
+            /* Puedes quitar esta línea si tu initializeMemoryGame oculta y luego muestra */
+            display: none; 
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
         .card {
             background-color: var(--honey-gold);
             border: 3px solid var(--bee-black);
@@ -139,7 +151,7 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js" type="module"></script>
     <script type="module" src="script.js"></script>
 </body>
 </html>
