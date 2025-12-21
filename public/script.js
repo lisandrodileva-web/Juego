@@ -1011,14 +1011,14 @@ function initializeHost() {
  */
 async function checkNameAvailability(name, gameContext) {
     // 1. Obtener ID único local (generarlo si no existe, igual que en portalScript)
-    let uniqueId = sessionStorage.getItem(`guestUniqueId_${EVENT_ID}`);
+    let uniqueId = localStorage.getItem(`guestUniqueId_${EVENT_ID}`);
     if (!uniqueId) {
         uniqueId = crypto.randomUUID ? crypto.randomUUID() : `guest-${Date.now()}`;
-        sessionStorage.setItem(`guestUniqueId_${EVENT_ID}`, uniqueId);
+        localStorage.setItem(`guestUniqueId_${EVENT_ID}`, uniqueId);
     }
 
     // 2. Verificar identidad local
-    const storedName = sessionStorage.getItem(`playerName_${EVENT_ID}`);
+    const storedName = localStorage.getItem(`playerName_${EVENT_ID}`);
     if (storedName && storedName.toLowerCase() === name.toLowerCase()) {
         return true; // Es el mismo usuario, permitir jugar.
     }
@@ -1046,10 +1046,10 @@ async function checkNameAvailability(name, gameContext) {
  * ⭐️ NUEVO: Registra el nombre en la lista central si no viene del portal
  */
 async function registerGuestName(name) {
-    let uniqueId = sessionStorage.getItem(`guestUniqueId_${EVENT_ID}`);
+    let uniqueId = localStorage.getItem(`guestUniqueId_${EVENT_ID}`);
     if (!uniqueId) {
         uniqueId = crypto.randomUUID ? crypto.randomUUID() : `guest-${Date.now()}`;
-        sessionStorage.setItem(`guestUniqueId_${EVENT_ID}`, uniqueId);
+        localStorage.setItem(`guestUniqueId_${EVENT_ID}`, uniqueId);
     }
     const guestsRef = ref(database, `events/${EVENT_ID}/data/guests`);
     await push(guestsRef, { name: name, uniqueId: uniqueId, timestamp: Date.now() });
@@ -1082,7 +1082,7 @@ export function initializePlayer() {
     
     if (startForm) {
         // ⭐️ NUEVO: Pre-llenar nombre si ya jugó antes
-        const storedName = sessionStorage.getItem(`playerName_${EVENT_ID}`);
+        const storedName = localStorage.getItem(`playerName_${EVENT_ID}`);
         if (storedName && nameInput) {
             nameInput.value = storedName;
             nameInput.disabled = true; // 🔒 Bloquear el input para que no puedan cambiarlo
@@ -1103,10 +1103,10 @@ export function initializePlayer() {
                     return;
                 }
                 // Si el nombre no estaba guardado (es nuevo ingreso directo al juego), lo registramos
-                if (!sessionStorage.getItem(`playerName_${EVENT_ID}`)) {
+                if (!localStorage.getItem(`playerName_${EVENT_ID}`)) {
                     await registerGuestName(name);
                 }
-                sessionStorage.setItem(`playerName_${EVENT_ID}`, name); // Guardar identidad
+                localStorage.setItem(`playerName_${EVENT_ID}`, name); // Guardar identidad
 
                 triviaPlayerName = name.substring(0, 20);
                 if (quizQuestions.length > 0) {
@@ -1406,7 +1406,7 @@ export function initializeMemoryGame() {
     if (!startButton || !modalGameContainer) return; 
 
     // ⭐️ NUEVO: Pre-llenar nombre si ya jugó antes
-    const storedName = sessionStorage.getItem(`playerName_${EVENT_ID}`);
+    const storedName = localStorage.getItem(`playerName_${EVENT_ID}`);
     if (storedName && nameInput) {
         nameInput.value = storedName;
         nameInput.disabled = true; // 🔒 Bloquear el input
@@ -1423,10 +1423,10 @@ export function initializeMemoryGame() {
                 return;
             }
             // Registrar si es nuevo
-            if (!sessionStorage.getItem(`playerName_${EVENT_ID}`)) {
+            if (!localStorage.getItem(`playerName_${EVENT_ID}`)) {
                 await registerGuestName(name);
             }
-            sessionStorage.setItem(`playerName_${EVENT_ID}`, name); // Guardar identidad
+            localStorage.setItem(`playerName_${EVENT_ID}`, name); // Guardar identidad
 
             memoryPlayerName = name;
             if(nameDisplay) nameDisplay.textContent = `Jugador: ${memoryPlayerName}`;
@@ -1627,7 +1627,7 @@ export function initializeHangmanGame() {
     if (playAgainBtn) playAgainBtn.classList.add('hidden');
 
     // ⭐️ NUEVO: Pre-llenar nombre en Ahorcado
-    const storedName = sessionStorage.getItem(`playerName_${EVENT_ID}`);
+    const storedName = localStorage.getItem(`playerName_${EVENT_ID}`);
     if (storedName && nameInput) {
         nameInput.value = storedName;
         nameInput.disabled = true; // 🔒 Bloquear el input
@@ -1643,10 +1643,10 @@ export function initializeHangmanGame() {
                 alert('Este nombre ya está en uso por otro jugador.');
                 return;
             }
-            if (!sessionStorage.getItem(`playerName_${EVENT_ID}`)) {
+            if (!localStorage.getItem(`playerName_${EVENT_ID}`)) {
                 await registerGuestName(name);
             }
-            sessionStorage.setItem(`playerName_${EVENT_ID}`, name);
+            localStorage.setItem(`playerName_${EVENT_ID}`, name);
 
             hangmanPlayerName = name.substring(0, 20);
             if(nameDisplay) nameDisplay.textContent = `Jugador: ${hangmanPlayerName}`;

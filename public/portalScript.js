@@ -632,15 +632,18 @@ function handleGuestName() {
 
     if (!modal || !form || !input || !messageTextarea) return;
 
-    // Usamos sessionStorage para que el nombre se guarde solo durante la sesión actual.
+    // Usamos localStorage para que la identidad persista si cierran el navegador.
     const storageKey = `guestName_${EVENT_ID}`;
-    const storedName = sessionStorage.getItem(storageKey);
+    const storedName = localStorage.getItem(storageKey);
     const guestUniqueIdKey = `guestUniqueId_${EVENT_ID}`; // Key for unique ID
-    let storedUniqueId = sessionStorage.getItem(guestUniqueIdKey);
+    let storedUniqueId = localStorage.getItem(guestUniqueIdKey);
 
     if (!storedUniqueId) {
-        storedUniqueId = crypto.randomUUID(); // Generate a UUID
-        sessionStorage.setItem(guestUniqueIdKey, storedUniqueId);
+        // Generar ID robusto
+        storedUniqueId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+            ? crypto.randomUUID() 
+            : `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem(guestUniqueIdKey, storedUniqueId);
     }
     GUEST_UNIQUE_ID = storedUniqueId;
 
@@ -694,8 +697,8 @@ function handleGuestName() {
                 console.warn("No se pudo registrar el invitado globalmente (Error de permisos).", error);
             }
 
-            sessionStorage.setItem(storageKey, name);
-            sessionStorage.setItem(`playerName_${EVENT_ID}`, name); // ⭐️ Sincronizar con script.js para los juegos
+            localStorage.setItem(storageKey, name);
+            localStorage.setItem(`playerName_${EVENT_ID}`, name); // ⭐️ Sincronizar con script.js para los juegos
             updateUIWithName(name);
             modal.style.display = 'none';
         }
