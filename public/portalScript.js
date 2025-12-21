@@ -656,11 +656,46 @@ function handleGuestName() {
         modal.style.display = 'flex'; // Mostramos el modal si no hay nombre.
     }
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const name = input.value.trim();
         if (name) {
+            // ⭐️ NUEVO: Verificar si el nombre ya está en uso en la lista global de invitados
+            let isTaken = false;
+            const guestsRef = dbRef(database, `events/${EVENT_ID}/data/guests`);
+
+            try {
+                const snapshot = await get(guestsRef);
+                if (snapshot.exists()) {
+                    snapshot.forEach(child => {
+                        const val = child.val();
+                        // Si el nombre coincide Y el ID único es diferente, entonces está ocupado.
+                        if (val.name && val.name.toLowerCase() === name.toLowerCase()) {
+                            if (val.uniqueId !== GUEST_UNIQUE_ID) {
+                                isTaken = true;
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.warn("No se pudo verificar unicidad del nombre (Error de permisos o red). Se permite el acceso.", error);
+                // Si falla la verificación, dejamos pasar al usuario para no bloquear la fiesta.
+            }
+
+            if (isTaken) {
+                alert('Este nombre ya está en uso por otro invitado. Por favor, elige otro.');
+                return;
+            }
+
+            // ⭐️ NUEVO: Registrar al invitado en la base de datos
+            try {
+                await push(guestsRef, { name: name, uniqueId: GUEST_UNIQUE_ID, timestamp: Date.now() });
+            } catch (error) {
+                console.warn("No se pudo registrar el invitado globalmente (Error de permisos).", error);
+            }
+
             sessionStorage.setItem(storageKey, name);
+            sessionStorage.setItem(`playerName_${EVENT_ID}`, name); // ⭐️ Sincronizar con script.js para los juegos
             updateUIWithName(name);
             modal.style.display = 'none';
         }

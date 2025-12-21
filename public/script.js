@@ -1,9 +1,8 @@
 // ⭐️⭐️⭐️ IMPORTACIONES DE AUTH AÑADIDAS ⭐️⭐️⭐️
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, set, push, onValue, remove, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-import { setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { getDatabase, ref, set, push, onValue, remove, get, query, orderByChild, equalTo, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 // ⭐️⭐️⭐️ FIN DE IMPORTACIONES ⭐️⭐️⭐️
 
 // =======================================================================
@@ -206,7 +205,7 @@ function applyDynamicTheme(themeConfig, textsConfig) { // ⭐️ CORRECCIÓN: Ac
  * ⭐️ FUNCIÓN loadEventConfig (MODIFICADA) ⭐️
  * (Tu código original, sin cambios)
  */
-async function loadEventConfig(eventId) {
+export async function loadEventConfig(eventId) {
     const configRef = ref(database, `events/${eventId}/config`);
     let config = {};
     window.eventConfig = {}; // ⭐️ NUEVO: Guardar config globalmente
@@ -459,8 +458,41 @@ function deleteQuestion(id) {
     return remove(questionToRemoveRef);
 }
 
-function saveFinalResult(data) {
-    return push(rankingsRef, data); 
+async function saveFinalResult(data) {
+    // ⭐️ LOGICA MODIFICADA: Evitar duplicados y guardar solo el mejor puntaje en Trivia
+    try {
+        // ⭐️ CAMBIO: Traemos todos los rankings y filtramos aquí para evitar error de índice en Firebase
+        const snapshot = await get(rankingsRef);
+        
+        let existingKey = null;
+        let existingData = null;
+
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                const val = child.val();
+                if (val.name === data.name) {
+                    existingKey = child.key;
+                    existingData = val;
+                }
+            });
+        }
+
+        if (existingKey) {
+            // Criterio: Mayor puntaje es mejor. A igual puntaje, menor tiempo es mejor.
+            const isBetter = data.score > existingData.score || (data.score === existingData.score && data.time < existingData.time);
+            
+            if (isBetter) {
+                const updateRef = ref(database, `events/${EVENT_ID}/data/rankings/${existingKey}`);
+                await update(updateRef, data);
+                console.log("Ranking Trivia actualizado con mejor puntuación.");
+            }
+        } else {
+            // Usuario nuevo
+            await push(rankingsRef, data);
+        }
+    } catch (error) {
+        console.error("Error al guardar ranking Trivia:", error);
+    }
 }
 
 function listenForRankings(renderCallback) {
@@ -973,7 +1005,57 @@ function initializeHost() {
 // (Tu código original, sin cambios)
 // =======================================================================
 
-function initializePlayer() {
+/**
+ * ⭐️ NUEVO: Verifica si un nombre ya está siendo usado en el ranking.
+ * Permite el reingreso si el usuario es el mismo (validado por sessionStorage).
+ */
+async function checkNameAvailability(name, gameContext) {
+    // 1. Obtener ID único local (generarlo si no existe, igual que en portalScript)
+    let uniqueId = sessionStorage.getItem(`guestUniqueId_${EVENT_ID}`);
+    if (!uniqueId) {
+        uniqueId = crypto.randomUUID ? crypto.randomUUID() : `guest-${Date.now()}`;
+        sessionStorage.setItem(`guestUniqueId_${EVENT_ID}`, uniqueId);
+    }
+
+    // 2. Verificar identidad local
+    const storedName = sessionStorage.getItem(`playerName_${EVENT_ID}`);
+    if (storedName && storedName.toLowerCase() === name.toLowerCase()) {
+        return true; // Es el mismo usuario, permitir jugar.
+    }
+
+    // 3. Verificar en la lista central de GUESTS
+    const guestsRef = ref(database, `events/${EVENT_ID}/data/guests`);
+    const snapshot = await get(guestsRef);
+    if (!snapshot.exists()) return true; // Nadie ha jugado aún.
+
+    let isTaken = false;
+    snapshot.forEach(child => {
+        const val = child.val();
+        if (val.name && val.name.toLowerCase() === name.toLowerCase()) {
+            // Si el nombre existe y el ID es diferente, está tomado.
+            if (val.uniqueId !== uniqueId) {
+                isTaken = true;
+            }
+        }
+    });
+
+    return !isTaken; // Si está tomado, retorna false (no disponible).
+}
+
+/**
+ * ⭐️ NUEVO: Registra el nombre en la lista central si no viene del portal
+ */
+async function registerGuestName(name) {
+    let uniqueId = sessionStorage.getItem(`guestUniqueId_${EVENT_ID}`);
+    if (!uniqueId) {
+        uniqueId = crypto.randomUUID ? crypto.randomUUID() : `guest-${Date.now()}`;
+        sessionStorage.setItem(`guestUniqueId_${EVENT_ID}`, uniqueId);
+    }
+    const guestsRef = ref(database, `events/${EVENT_ID}/data/guests`);
+    await push(guestsRef, { name: name, uniqueId: uniqueId, timestamp: Date.now() });
+}
+
+export function initializePlayer() {
     // --- NUEVO: Actualizar enlaces "Volver" ---
     document.querySelectorAll("button[onclick=\"window.location.href='index.html'\"]").forEach(btn => {
         btn.onclick = () => window.location.href = `index.html?event=${EVENT_ID}`;
@@ -999,13 +1081,33 @@ function initializePlayer() {
     const finalScoreElement = document.getElementById('final-score');
     
     if (startForm) {
+        // ⭐️ NUEVO: Pre-llenar nombre si ya jugó antes
+        const storedName = sessionStorage.getItem(`playerName_${EVENT_ID}`);
+        if (storedName && nameInput) {
+            nameInput.value = storedName;
+            nameInput.disabled = true; // 🔒 Bloquear el input para que no puedan cambiarlo
+            nameInput.style.backgroundColor = "#f0f0f0"; // Feedback visual
+        }
+
         listenForQuestions(initializePlayerScreen);
         if (nextButtonContainer) nextButtonContainer.classList.add('hidden'); 
 
-        startForm.addEventListener('submit', (e) => {
+        startForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = nameInput.value.trim();
             if (name) {
+                // ⭐️ NUEVO: Verificar si el nombre está disponible
+                const isAvailable = await checkNameAvailability(name, 'trivia');
+                if (!isAvailable) {
+                    alert('Este nombre ya está en uso por otro jugador. Por favor, elige otro.');
+                    return;
+                }
+                // Si el nombre no estaba guardado (es nuevo ingreso directo al juego), lo registramos
+                if (!sessionStorage.getItem(`playerName_${EVENT_ID}`)) {
+                    await registerGuestName(name);
+                }
+                sessionStorage.setItem(`playerName_${EVENT_ID}`, name); // Guardar identidad
+
                 triviaPlayerName = name.substring(0, 20);
                 if (quizQuestions.length > 0) {
                     startGame();
@@ -1253,14 +1355,40 @@ function showMemoryResults() {
     if (resultsContainer) resultsContainer.classList.remove('hidden');
     if (finalTimeElement) finalTimeElement.textContent = `¡${memoryPlayerName}, completaste el juego en: ${secondsElapsed} segundos!`;
     const finalData = { name: memoryPlayerName, time: secondsElapsed, timestamp: Date.now() };
-    push(memoryRankingsRef, finalData)
-        .then(() => console.log("Resultado de Memoria guardado con éxito."))
-        .catch(error => console.error("Error al guardar el resultado de Memoria:", error));
+    
+    // ⭐️ LOGICA MODIFICADA: Evitar duplicados y guardar solo el mejor tiempo
+    // ⭐️ CAMBIO: Filtrado en cliente para evitar error de índice
+    get(memoryRankingsRef).then((snapshot) => {
+        let existingKey = null;
+        let existingData = null;
+
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                const val = child.val();
+                if (val.name === memoryPlayerName) {
+                    existingKey = child.key;
+                    existingData = val;
+                }
+            });
+        }
+
+        if (existingKey) {
+            // Criterio: Menor tiempo es mejor
+            if (finalData.time < existingData.time) {
+                const updateRef = ref(database, `events/${EVENT_ID}/data/memoryRankings/${existingKey}`);
+                update(updateRef, finalData).then(() => console.log("Mejor tiempo de Memoria actualizado."));
+            }
+        } else {
+            push(memoryRankingsRef, finalData)
+                .then(() => console.log("Resultado de Memoria guardado con éxito."))
+                .catch(error => console.error("Error al guardar el resultado de Memoria:", error));
+        }
+    }).catch(error => console.error("Error verificando ranking de memoria:", error));
 }
 
 
 // 9. FUNCIÓN DE INICIALIZACIÓN GLOBAL para memory.html
-function initializeMemoryGame() {
+export function initializeMemoryGame() {
     // --- NUEVO: Actualizar enlaces "Volver" ---
     document.querySelectorAll("button[onclick=\"window.location.href='index.html'\"]").forEach(btn => {
         btn.onclick = () => window.location.href = `index.html?event=${EVENT_ID}`;
@@ -1277,9 +1405,29 @@ function initializeMemoryGame() {
 
     if (!startButton || !modalGameContainer) return; 
 
-    function startMemory() {
+    // ⭐️ NUEVO: Pre-llenar nombre si ya jugó antes
+    const storedName = sessionStorage.getItem(`playerName_${EVENT_ID}`);
+    if (storedName && nameInput) {
+        nameInput.value = storedName;
+        nameInput.disabled = true; // 🔒 Bloquear el input
+        nameInput.style.backgroundColor = "#f0f0f0";
+    }
+
+    async function startMemory() {
         const name = nameInput.value.trim();
         if (name.length > 0) {
+            // ⭐️ NUEVO: Verificar si el nombre está disponible
+            const isAvailable = await checkNameAvailability(name, 'memory');
+            if (!isAvailable) {
+                alert('Este nombre ya está en uso por otro jugador. Por favor, elige otro.');
+                return;
+            }
+            // Registrar si es nuevo
+            if (!sessionStorage.getItem(`playerName_${EVENT_ID}`)) {
+                await registerGuestName(name);
+            }
+            sessionStorage.setItem(`playerName_${EVENT_ID}`, name); // Guardar identidad
+
             memoryPlayerName = name;
             if(nameDisplay) nameDisplay.textContent = `Jugador: ${memoryPlayerName}`;
             if (startScreen) startScreen.classList.add('hidden');
@@ -1461,7 +1609,7 @@ function disableKeyboard() {
 
 
 // FUNCIÓN DE INICIALIZACIÓN GLOBAL para hangman.html
-function initializeHangmanGame() {
+export function initializeHangmanGame() {
     // --- NUEVO: Actualizar enlaces "Volver" ---
     document.querySelectorAll("button[onclick=\"window.location.href='index.html'\"]").forEach(btn => {
         btn.onclick = () => window.location.href = `index.html?event=${EVENT_ID}`;
@@ -1478,9 +1626,28 @@ function initializeHangmanGame() {
     if (!startButton) return; 
     if (playAgainBtn) playAgainBtn.classList.add('hidden');
 
+    // ⭐️ NUEVO: Pre-llenar nombre en Ahorcado
+    const storedName = sessionStorage.getItem(`playerName_${EVENT_ID}`);
+    if (storedName && nameInput) {
+        nameInput.value = storedName;
+        nameInput.disabled = true; // 🔒 Bloquear el input
+        nameInput.style.backgroundColor = "#f0f0f0";
+    }
+
     async function handleStartGame() {
         const name = nameInput.value.trim();
         if (name.length > 0) {
+            // ⭐️ NUEVO: Verificar disponibilidad en Ahorcado también
+            const isAvailable = await checkNameAvailability(name, 'hangman');
+            if (!isAvailable) {
+                alert('Este nombre ya está en uso por otro jugador.');
+                return;
+            }
+            if (!sessionStorage.getItem(`playerName_${EVENT_ID}`)) {
+                await registerGuestName(name);
+            }
+            sessionStorage.setItem(`playerName_${EVENT_ID}`, name);
+
             hangmanPlayerName = name.substring(0, 20);
             if(nameDisplay) nameDisplay.textContent = `Jugador: ${hangmanPlayerName}`;
             
@@ -1515,7 +1682,7 @@ function initializeHangmanGame() {
 // --- LÓGICA PARA LA PÁGINA DE RANKING (ranking.html) ---
 // (Tu código original, sin cambios)
 // =======================================================================
-function initializeRankingPage() {
+export function initializeRankingPage() {
     listenForRankings(renderTriviaRanking);
     listenForMemoryRankings(renderMemoryRanking);
 }
@@ -1525,15 +1692,20 @@ function initializeRankingPage() {
 // ⭐️⭐️⭐️ INICIALIZACIÓN PRINCIPAL: REESTRUCTURADA CON AUTH ⭐️⭐️⭐️
 // =======================================================================
 
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        // 1. Obtener el ID del evento (bloquea si no existe)
+// ⭐️ Variable para asegurar que la inicialización solo ocurra una vez y se pueda esperar
+let initializationPromise = null;
+
+async function ensureAppInitialized() {
+    if (initializationPromise) return initializationPromise;
+
+    initializationPromise = (async () => {
+        // 1. Obtener el ID del evento
         EVENT_ID = getEventId();
         
-        // 2. Cargar la configuración (bloquea si está inactivo o juegos off)
+        // 2. Cargar la configuración
         await loadEventConfig(EVENT_ID);
 
-        // 3. Asignar las referencias principales de la base de datos
+        // 3. Asignar las referencias principales de la base de datos AHORA
         const basePath = `events/${EVENT_ID}/data`;
         questionsRef = ref(database, `${basePath}/questions`);
         rankingsRef = ref(database, `${basePath}/rankings`);
@@ -1541,23 +1713,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         memoryRankingsRef = ref(database, `${basePath}/memoryRankings`);
         hangmanWordsRef = ref(database, `${basePath}/hangmanWords`);
 
-        // 4. NUEVO: Enrutador de Autenticación
-        // Decide si la página es pública o protegida
+        // ⭐️ SOLUCIÓN FOUC
+        const mainContainer = document.querySelector('.quiz-container');
+        if (mainContainer) mainContainer.style.opacity = '1';
+    })();
+    return initializationPromise;
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await ensureAppInitialized();
+
+        // 4. Enrutador de Autenticación
         const path = window.location.pathname;
 
         if (path.includes('host.html')) {
             // Esta es una página protegida, necesita login de cliente
             handleHostAuth();
         } else {
-            // Esta es una página pública (player, memory, hangman, ranking)
-            // Simplemente la inicializamos
-            initializeAppPage(path);
+            // Evitar doble ejecución si initializePage ya fue llamado manualmente
+            if (!window.appLogicInitialized) {
+                window.appLogicInitialized = true;
+                initializeAppPage(path);
+            }
         }
-
-        // ⭐️ SOLUCIÓN FOUC: Hacer visible el contenido principal después de cargar la configuración.
-        // Esto previene el "parpadeo" de contenido sin estilo en todas las páginas de juegos.
-        const mainContainer = document.querySelector('.quiz-container');
-        if (mainContainer) mainContainer.style.opacity = '1';
 
     } catch (error) {
         // Si getEventId o loadEventConfig fallan, la app se detiene.
@@ -1658,7 +1837,7 @@ function handleHostAuth() {
  * ⭐️ NUEVA FUNCIÓN: Inicializa la página pública solicitada
  * (Esto es el 'else' de tu 'DOMContentLoaded' original)
  */
-function initializeAppPage(path) {
+export function initializeAppPage(path) {
     // ⭐️ CORRECCIÓN: Se elimina la inicialización de juegos de la página de índice.
     if (path.includes('player.html')) {
         initializePlayer();
@@ -2089,5 +2268,19 @@ async function exportMemoriesToHTML(eventId) {
     } finally {
         exportButton.disabled = false;
         exportButton.innerHTML = originalButtonText;
+    }
+}
+
+// ⭐️ CORRECCIÓN: Exportar una función genérica para compatibilidad con llamadas externas
+// Ahora es ASÍNCRONA y espera a que las referencias existan.
+export async function initializePage() {
+    try {
+        await ensureAppInitialized();
+        if (!window.appLogicInitialized) {
+            window.appLogicInitialized = true;
+            return initializeAppPage(window.location.pathname);
+        }
+    } catch (error) {
+        console.error("Error en initializePage manual:", error);
     }
 }
