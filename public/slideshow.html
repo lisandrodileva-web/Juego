@@ -81,6 +81,13 @@
             object-fit: contain;
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 10s ease-in-out;
+            transform: scale(1);
+        }
+
+        .slide.active .media {
+            /* Ken Burns Effect */
+            transform: scale(1.06);
         }
 
         .slide .info {

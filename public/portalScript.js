@@ -130,13 +130,22 @@ function applyDynamicTheme(themeConfig, textsConfig) {
         `;
     }
 
-    // 3. Manejar la imagen de fondo por separado
+    // 3. Manejar la imagen de fondo por separado o gradiente animado de respaldo
     if (themeConfig.background_image_url) {
          cssVariables += `
             body {
                 background-image: url('${themeConfig.background_image_url}') !important;
                 background-size: ${themeConfig.background_image_size || 'cover'};
                 background-position: ${themeConfig.background_image_position || 'center'};
+                background-repeat: no-repeat;
+            }
+        `;
+    } else {
+         cssVariables += `
+            body {
+                background: linear-gradient(-45deg, var(--portal-bg, #ffffff), var(--btn-portal-bg, #e2e8f0), var(--color-success, #34d399), var(--portal-bg, #ffffff)) !important;
+                background-size: 400% 400% !important;
+                animation: gradientShift 15s ease infinite !important;
             }
         `;
     }
@@ -247,6 +256,10 @@ async function loadEventConfig(eventId) {
 
     // --- 2. APLICAR TEMA VISUAL (REEMPLAZADO) ---
     applyDynamicTheme(config.theme || {}, config.texts || {});
+    
+    // Iniciar partículas flotantes temáticas
+    const mainIcon = (config.theme && config.theme.icons) ? config.theme.icons.icon_main : '🐝';
+    initFloatingParticles(mainIcon);
     
     // --- NUEVO: Aplicar Textos Dinámicos ---
     if (config.texts) {
@@ -439,7 +452,11 @@ function renderMemories(memories) {
 
     memories.forEach(memory => {
         const memoryItem = document.createElement('div');
-        memoryItem.className = 'memory-item p-3 mb-3 border-b border-yellow-200 last:border-b-0'; 
+        memoryItem.className = 'memory-item p-3 mb-4'; 
+        
+        // Inclinación aleatoria estilo Scrapbook / Polaroid
+        const randomRotation = (Math.random() * 6 - 3).toFixed(2); // Entre -3 y 3 grados
+        memoryItem.style.transform = `rotate(${randomRotation}deg)`; 
         
         let mediaContent = '';
         const fileUrl = memory.fileUrl || memory.mediaUrl;
@@ -448,9 +465,9 @@ function renderMemories(memories) {
         if (fileUrl) {
             const isVideo = fileType && fileType.startsWith('video');
             if (isVideo) {
-                mediaContent = `<video controls src="${fileUrl}" class="w-full h-auto max-h-48 object-cover rounded-lg shadow-md mt-2" preload="none" style="max-width: 100%;"></video>`;
+                mediaContent = `<video controls src="${fileUrl}" class="media w-full h-auto max-h-48 object-cover rounded-lg shadow-md mt-2" preload="none" style="max-width: 100%;"></video>`;
             } else {
-                mediaContent = `<img src="${fileUrl}" alt="Recuerdo de ${memory.name}" class="w-full h-auto max-h-48 object-cover rounded-lg shadow-md mt-2" loading="lazy" style="max-width: 100%;">`;
+                mediaContent = `<img src="${fileUrl}" alt="Recuerdo de ${memory.name}" class="media w-full h-auto max-h-48 object-cover rounded-lg shadow-md mt-2" loading="lazy" style="max-width: 100%;">`;
             }
         }
         
@@ -568,6 +585,14 @@ function listenForMemories() {
 
 // ⭐️ NUEVO: Delegación de eventos para los nuevos elementos
 document.addEventListener('click', function(e) {
+    // 🔍 Visor de Fotos (Lightbox) al hacer click en fotos/videos de recuerdos
+    const clickedMedia = e.target.closest('.memory-item .media');
+    if (clickedMedia && !e.target.closest('.reaction-btn-container') && !e.target.closest('.comment-bubble-btn') && !e.target.closest('.comment-form')) {
+        e.preventDefault();
+        openLightbox(clickedMedia);
+        return;
+    }
+
     // Manejador para el botón de Reacción
     const reactionBtnContainer = e.target.closest('.reaction-btn-container');
     if (reactionBtnContainer) {
@@ -914,3 +939,107 @@ document.addEventListener('DOMContentLoaded', async () => {
         // La app se detendrá aquí si el evento no existe o está inactivo
     }
 });
+
+// =======================================================================
+// --- ⭐️ NUEVAS FUNCIONES DE EFECTOS VISUALES Y PARTÍCULAS ⭐️ ---
+// =======================================================================
+
+function initFloatingParticles(emoji = '✨') {
+    if (document.getElementById('particles-container')) return;
+    
+    const container = document.createElement('div');
+    container.id = 'particles-container';
+    container.style.position = 'fixed';
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.width = '100vw';
+    container.style.height = '100vh';
+    container.style.pointerEvents = 'none';
+    container.style.zIndex = '0';
+    container.style.overflow = 'hidden';
+    document.body.appendChild(container);
+    
+    const maxParticles = 12;
+    for (let i = 0; i < maxParticles; i++) {
+        createParticle(container, emoji);
+    }
+}
+
+function createParticle(container, emoji) {
+    const particle = document.createElement('span');
+    particle.textContent = emoji;
+    particle.style.position = 'absolute';
+    particle.style.fontSize = `${Math.random() * 20 + 12}px`;
+    particle.style.opacity = Math.random() * 0.4 + 0.1;
+    particle.style.left = `${Math.random() * 100}vw`;
+    particle.style.bottom = `-50px`;
+    
+    const duration = Math.random() * 15 + 12;
+    particle.style.transition = `transform ${duration}s linear, opacity ${duration}s linear`;
+    container.appendChild(particle);
+    
+    setTimeout(() => {
+        animateParticle(particle, duration);
+    }, 100);
+}
+
+function animateParticle(particle, duration) {
+    if (!particle.parentElement) return;
+    
+    const travelX = (Math.random() * 160 - 80);
+    particle.style.transform = `translate(${travelX}px, -110vh) rotate(${Math.random() * 360}deg)`;
+    particle.style.opacity = '0';
+    
+    setTimeout(() => {
+        particle.style.transition = 'none';
+        particle.style.transform = 'translate(0, 0) rotate(0deg)';
+        particle.style.opacity = Math.random() * 0.4 + 0.1;
+        particle.style.left = `${Math.random() * 100}vw`;
+        
+        setTimeout(() => {
+            particle.style.transition = `transform ${duration}s linear, opacity ${duration}s linear`;
+            animateParticle(particle, duration);
+        }, 100);
+    }, duration * 1000);
+}
+
+function openLightbox(mediaElement) {
+    let lightbox = document.getElementById('lightbox-modal');
+    if (!lightbox) {
+        lightbox = document.createElement('div');
+        lightbox.id = 'lightbox-modal';
+        lightbox.className = 'fixed inset-0 bg-black bg-opacity-95 flex flex-col items-center justify-center z-[11000] transition-opacity duration-300';
+        lightbox.innerHTML = `
+            <button id="lightbox-close" class="absolute top-4 right-4 text-white text-4xl font-bold cursor-pointer hover:text-red-500 transition-colors">&times;</button>
+            <div id="lightbox-content" class="max-w-[90%] max-h-[85%] flex items-center justify-center"></div>
+        `;
+        document.body.appendChild(lightbox);
+        
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox || e.target.id === 'lightbox-close') {
+                lightbox.classList.add('opacity-0');
+                setTimeout(() => {
+                    lightbox.style.display = 'none';
+                }, 300);
+            }
+        });
+    }
+    
+    const content = lightbox.querySelector('#lightbox-content');
+    content.innerHTML = '';
+    
+    const clone = mediaElement.cloneNode(true);
+    clone.style.maxWidth = '100%';
+    clone.style.maxHeight = '80vh';
+    clone.style.objectFit = 'contain';
+    clone.style.borderRadius = '8px';
+    clone.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+    if (clone.tagName === 'VIDEO') {
+        clone.controls = true;
+        clone.autoplay = true;
+    }
+    content.appendChild(clone);
+    
+    lightbox.style.display = 'flex';
+    lightbox.classList.remove('opacity-0');
+}

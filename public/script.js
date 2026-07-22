@@ -144,6 +144,15 @@ function applyDynamicTheme(themeConfig, textsConfig) { // ⭐️ CORRECCIÓN: Ac
                 background-image: url('${themeConfig.background_image_url}') !important;
                 background-size: ${themeConfig.background_image_size || 'cover'};
                 background-position: ${themeConfig.background_image_position || 'center'};
+                background-repeat: no-repeat;
+            }
+        `;
+    } else {
+         cssVariables += `
+            body {
+                background: linear-gradient(-45deg, var(--portal-bg, #ffffff), var(--btn-portal-bg, #e2e8f0), var(--color-success, #34d399), var(--portal-bg, #ffffff)) !important;
+                background-size: 400% 400% !important;
+                animation: gradientShift 15s ease infinite !important;
             }
         `;
     }
@@ -258,6 +267,10 @@ export async function loadEventConfig(eventId) {
 
     // --- 2. APLICAR TEMA VISUAL ---
     applyDynamicTheme(config.theme || {}, config.texts || {}); // ⭐️ CORRECCIÓN: Pasar ambos objetos de configuración
+    
+    // Iniciar partículas flotantes temáticas
+    const mainIcon = (config.theme && config.theme.icons) ? config.theme.icons.icon_main : '🐝';
+    initFloatingParticles(mainIcon);
     
     // --- 3. APLICAR FUNCIONALIDADES (Juegos) ---
     if (config.features && config.features.games_enabled === false) {
@@ -2330,4 +2343,67 @@ export async function initializePage() {
     } catch (error) {
         console.error("Error en initializePage manual:", error);
     }
+}
+
+// =======================================================================
+// --- ⭐️ NUEVAS FUNCIONES DE EFECTOS VISUALES Y PARTÍCULAS ⭐️ ---
+// =======================================================================
+
+function initFloatingParticles(emoji = '✨') {
+    if (document.getElementById('particles-container')) return;
+    
+    const container = document.createElement('div');
+    container.id = 'particles-container';
+    container.style.position = 'fixed';
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.width = '100vw';
+    container.style.height = '100vh';
+    container.style.pointerEvents = 'none';
+    container.style.zIndex = '0';
+    container.style.overflow = 'hidden';
+    document.body.appendChild(container);
+    
+    const maxParticles = 12;
+    for (let i = 0; i < maxParticles; i++) {
+        createParticle(container, emoji);
+    }
+}
+
+function createParticle(container, emoji) {
+    const particle = document.createElement('span');
+    particle.textContent = emoji;
+    particle.style.position = 'absolute';
+    particle.style.fontSize = `${Math.random() * 20 + 12}px`;
+    particle.style.opacity = Math.random() * 0.4 + 0.1;
+    particle.style.left = `${Math.random() * 100}vw`;
+    particle.style.bottom = `-50px`;
+    
+    const duration = Math.random() * 15 + 12;
+    particle.style.transition = `transform ${duration}s linear, opacity ${duration}s linear`;
+    container.appendChild(particle);
+    
+    setTimeout(() => {
+        animateParticle(particle, duration);
+    }, 100);
+}
+
+function animateParticle(particle, duration) {
+    if (!particle.parentElement) return;
+    
+    const travelX = (Math.random() * 160 - 80);
+    particle.style.transform = `translate(${travelX}px, -110vh) rotate(${Math.random() * 360}deg)`;
+    particle.style.opacity = '0';
+    
+    setTimeout(() => {
+        particle.style.transition = 'none';
+        particle.style.transform = 'translate(0, 0) rotate(0deg)';
+        particle.style.opacity = Math.random() * 0.4 + 0.1;
+        particle.style.left = `${Math.random() * 100}vw`;
+        
+        setTimeout(() => {
+            particle.style.transition = `transform ${duration}s linear, opacity ${duration}s linear`;
+            animateParticle(particle, duration);
+        }, 100);
+    }, duration * 1000);
 }

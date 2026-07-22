@@ -46,12 +46,16 @@ body {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    background-color: var(--portal-bg, #ffffff); /* Blanco por defecto */
+    background-color: var(--portal-bg, rgba(255, 255, 255, 0.55)); /* Blanco semi-transparente por defecto */
     border-radius: var(--portal-border-radius, 1rem); /* 16px */
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
     width: 100%;
     text-align: center;
-    border: none; 
+    
+    /* ⭐️ Glassmorphism y Desenfoque */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
     
     /* ❗️ CORRECCIÓN: Ajustamos la altura al 100% del body (que tiene padding) */
     min-height: 100%;
@@ -539,11 +543,94 @@ h1 {
 
 /* --- ⭐️ NUEVO: Estilos para Interacción en Recuerdos ⭐️ --- */
 
+/* Mosaico tipo Pinterest para los recuerdos */
+#memories-list {
+    column-count: 2;
+    column-gap: 16px;
+    display: block !important;
+}
+
+@media (max-width: 600px) {
+    #memories-list {
+        column-count: 1;
+        column-gap: 0;
+    }
+}
+
 .memory-item {
     background-color: #fff;
-    border-radius: 0.75rem; /* 12px */
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border-radius: 0.25rem; /* Menos redondeado para estilo papel polaroid */
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12); /* Sombra más profunda */
     border: 1px solid #f0f0f0;
+    padding: 12px 12px 28px 12px !important; /* Más padding en la base de la Polaroid */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: inline-block; /* Requerido para el Masonry grid */
+    width: 100%;
+    margin-bottom: 16px; /* Separación vertical */
+    box-sizing: border-box;
+    break-inside: avoid; /* Evita que se rompa la tarjeta entre columnas */
+}
+
+.memory-item:hover {
+    transform: scale(1.03) rotate(0deg) !important; /* Se endereza y agranda en hover */
+    box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+
+/* Redimensionamiento y enmarcado de imágenes y videos en Polaroid */
+.memory-item img, .memory-item video {
+    border: 1px solid #f1f5f9;
+    border-radius: 2px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    max-height: 250px !important;
+    object-fit: cover;
+    width: 100%;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* --- ⭐️ NUEVO: Efecto de Hover y Brillo Metálico en Juego de Memoria ⭐️ --- */
+
+/* Brillo al pasar sobre la carta tapada */
+.card:hover:not(.flipped):not(.matched) .card-back {
+    box-shadow: 0 0 12px 3px var(--mem-card-back-border-color, var(--honey-gold, #F59E0B));
+    transform: scale(1.03);
+    transition: all 0.2s ease-in-out;
+}
+
+/* Efecto de destello metálico al girarse */
+.card-inner::after {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: linear-gradient(
+        to bottom right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.4) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    transform: rotate(30deg);
+    transition: transform 0.6s ease-in-out;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 20;
+}
+
+.card.flipped .card-inner::after {
+    animation: flashShine 0.6s ease-in-out;
+}
+
+@keyframes flashShine {
+    0% { transform: translate(-100%, -100%) rotate(30deg); opacity: 1; }
+    100% { transform: translate(100%, 100%) rotate(30deg); opacity: 0; }
+}
+
+/* Animación para el gradiente de fondo cuando no hay imagen */
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
 .like-btn {
