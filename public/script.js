@@ -1,8 +1,8 @@
 // ⭐️⭐️⭐️ IMPORTACIONES DE AUTH AÑADIDAS ⭐️⭐️⭐️
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, set, push, onValue, remove, get, query, orderByChild, equalTo, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { getDatabase, ref, set, push, onValue, remove, get, query, orderByChild, equalTo, update, connectDatabaseEmulator } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, connectStorageEmulator } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 // ⭐️⭐️⭐️ FIN DE IMPORTACIONES ⭐️⭐️⭐️
 
 // =======================================================================
@@ -27,6 +27,17 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const storage = getStorage(app); 
 const auth = getAuth(app); // ⭐️⭐️⭐️ INICIALIZACIÓN DE AUTH AÑADIDA ⭐️⭐️⭐️
+
+if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+  try {
+    connectAuthEmulator(auth, "http://localhost:9099");
+    connectDatabaseEmulator(database, "localhost", 9000);
+    connectStorageEmulator(storage, "localhost", 9199);
+    console.log("Conectado a los emuladores locales de Auth, Database y Storage en script.js");
+  } catch (e) {
+    console.warn("Error conectando a los emuladores locales:", e);
+  }
+}
 
 // --- NUEVO: Refs y ID de Evento Globales (se asignarán en DOMContentLoaded) ---
 let EVENT_ID;
@@ -1309,8 +1320,17 @@ function checkForMatch() {
 function disableCards() {
     firstCard.removeEventListener('click', flipCard);
     secondCard.removeEventListener('click', flipCard);
-    firstCard.classList.add('matched');
-    secondCard.classList.add('matched');
+    firstCard.classList.add('matched', 'match-pulse');
+    secondCard.classList.add('matched', 'match-pulse');
+    
+    // Remover la clase de animación después de que termine (0.6s)
+    const card1 = firstCard;
+    const card2 = secondCard;
+    setTimeout(() => {
+        card1.classList.remove('match-pulse');
+        card2.classList.remove('match-pulse');
+    }, 600);
+
     matchCount++;
     resetBoard();
     if (matchCount === memoryGameImages.length / 2) {
@@ -1356,6 +1376,15 @@ function showMemoryResults() {
     if (finalTimeElement) finalTimeElement.textContent = `¡${memoryPlayerName}, completaste el juego en: ${secondsElapsed} segundos!`;
     const finalData = { name: memoryPlayerName, time: secondsElapsed, timestamp: Date.now() };
     
+    // Disparar confeti al ganar el juego de memoria
+    if (typeof confetti === 'function') {
+        confetti({
+            particleCount: 150,
+            spread: 80,
+            origin: { y: 0.6 }
+        });
+    }
+
     // ⭐️ LOGICA MODIFICADA: Evitar duplicados y guardar solo el mejor tiempo
     // ⭐️ CAMBIO: Filtrado en cliente para evitar error de índice
     get(memoryRankingsRef).then((snapshot) => {
@@ -1554,6 +1583,15 @@ function guessLetter(letter) {
     if (!found) {
         lives--;
         if (button) button.style.backgroundColor = '#F44336';
+        
+        // Sacudir el dibujo de la horca por cometer un error
+        const graphicContainer = document.getElementById('hangman-graphic-container');
+        if (graphicContainer) {
+            graphicContainer.classList.add('shake');
+            setTimeout(() => {
+                graphicContainer.classList.remove('shake');
+            }, 500);
+        }
     } else {
         if (button) button.style.backgroundColor = 'var(--spring-green)';
     }
@@ -1571,6 +1609,15 @@ function checkGameStatus() {
         wordDisplay.textContent = hangmanWord;
         disableKeyboard();
         playAgainBtn.classList.remove('hidden');
+        
+        // Disparar confeti al ganar
+        if (typeof confetti === 'function') {
+            confetti({
+                particleCount: 150,
+                spread: 80,
+                origin: { y: 0.6 }
+            });
+        }
     } else if (lives === 0) {
         gameStatus.textContent = `💀 ¡TE AHORCASTE! La palabra era: ${hangmanWord}.`;
         wordDisplay.textContent = hangmanWord.split('').join(' ');

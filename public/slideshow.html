@@ -120,7 +120,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-        import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+        import { getDatabase, ref, onValue, get, connectDatabaseEmulator } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDRsS6YQ481KQadSk8gf9QtxVt_asnrDlc",
@@ -132,6 +132,15 @@
 
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            try {
+                connectDatabaseEmulator(database, "localhost", 9000);
+                console.log("Conectado al emulador de Realtime Database (puerto 9000)");
+            } catch (e) {
+                console.warn("Error conectando al emulador de Database:", e);
+            }
+        }
 
         const SLIDE_INTERVAL = 8000; // 8 segundos
         let memories = [];

@@ -1,7 +1,7 @@
 // REEMPLAZA TUS IMPORTACIONES EN portalScript.js CON ESTO:
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref as dbRef, push, onValue, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+import { getDatabase, ref as dbRef, push, onValue, get, connectDatabaseEmulator, query, limitToLast } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, connectStorageEmulator } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 import { runTransaction } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"; // ⭐️ NUEVA IMPORTACIÓN
 // CONFIGURACIÓN DE FIREBASE (Se mantiene igual)
 // =======================================================================
@@ -19,6 +19,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const storage = getStorage(app); 
+
+if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+  try {
+    connectDatabaseEmulator(database, "localhost", 9000);
+    connectStorageEmulator(storage, "localhost", 9199);
+    console.log("Conectado a los emuladores locales de Database y Storage en portalScript.js");
+  } catch (e) {
+    console.warn("Error conectando a los emuladores locales:", e);
+  }
+} 
 
 const MAX_FILE_SIZE = 200 * 1024 * 1024; // 50 MB
 
@@ -537,7 +547,10 @@ function listenForMemories() {
     const memoriesList = document.getElementById('memories-list');
     if (!memoriesList || !memoriesRef) return; // Asegura que las referencias existan
     
-    onValue(memoriesRef, (snapshot) => {
+    // ⚡ Optimización: Limitamos la escucha en tiempo real a los últimos 25 recuerdos
+    const memoriesQuery = query(memoriesRef, limitToLast(25));
+    
+    onValue(memoriesQuery, (snapshot) => {
         const data = snapshot.val();
         const memories = [];
         if (data) {

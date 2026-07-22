@@ -1,11 +1,11 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 // ⭐️⭐️⭐️ NUEVAS IMPORTACIONES DE AUTH ⭐️⭐️⭐️
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 // ⭐️⭐️⭐️ FIN NUEVAS IMPORTACIONES ⭐️⭐️⭐️
 import { setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-functions.js";
-import { getDatabase, ref, set, onValue, remove, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+import { getFunctions, httpsCallable, connectFunctionsEmulator } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-functions.js";
+import { getDatabase, ref, set, onValue, remove, get, connectDatabaseEmulator } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, connectStorageEmulator } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 
 // =======================================================================
 // CONFIGURACIÓN DE FIREBASE
@@ -25,9 +25,19 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const storage = getStorage(app);
 const functions = getFunctions(app); // ⭐️ NUEVO: Inicializar Firebase Functions
-
-// ⭐️⭐️⭐️ INICIO: NUEVA LÓGICA DE AUTENTICACIÓN ⭐️⭐️⭐️
 const auth = getAuth(app);
+
+if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+  try {
+    connectAuthEmulator(auth, "http://localhost:9099");
+    connectDatabaseEmulator(database, "localhost", 9000);
+    connectStorageEmulator(storage, "localhost", 9199);
+    connectFunctionsEmulator(functions, "localhost", 5001);
+    console.log("Conectado a los emuladores locales de Firebase en super-admin.js");
+  } catch (e) {
+    console.warn("Error conectando a los emuladores locales:", e);
+  }
+}
 
 // ❗️❗️❗️ CAMBIA ESTO por tu email de super-administrador
 const SUPER_ADMIN_EMAIL = "lisandrodileva@gmail.com"; 

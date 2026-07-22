@@ -3,7 +3,7 @@
 "use client";
 
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, get } from "firebase/database";
+import { getDatabase, ref, get, connectDatabaseEmulator } from "firebase/database";
 import { motion } from "framer-motion";
 import { useState } from 'react';
 
@@ -16,6 +16,15 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
+
+if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+  try {
+    connectDatabaseEmulator(database, "localhost", 9000);
+    console.log("Conectado al emulador de Realtime Database en la vidriera");
+  } catch (e) {
+    console.warn("Error conectando al emulador de Database:", e);
+  }
+}
 
 // Pequeños componentes para los íconos (mejora la legibilidad)
 const IconTrivia = () => <span className="text-3xl">✍️</span>;
