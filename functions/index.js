@@ -1,26 +1,26 @@
-const functions = require("firebase-functions");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
 
 /**
- * Función Callable para crear o actualizar un usuario anfitrión.
- * Recibe un 'username' y 'password' desde el cliente.
+ * Función Callable para crear o actualizar un usuario anfitrión (Gen 2).
+ * Recibe un 'username' y 'password' desde el cliente en request.data.
  */
-exports.createOrUpdateHostUser = functions.https.onCall(async (data, context) => {
+exports.createOrUpdateHostUser = onCall(async (request) => {
   // 1. Verificar que la llamada viene de un usuario autenticado (el super-admin)
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
+  if (!request.auth) {
+    throw new HttpsError(
         "unauthenticated",
         "La función solo puede ser llamada por un usuario autenticado.",
     );
   }
 
-  const username = data.username;
-  const password = data.password;
+  const username = request.data.username;
+  const password = request.data.password;
 
   if (!username || !password || password.length < 6) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
         "invalid-argument",
         "El nombre de usuario y una contraseña de al menos 6 caracteres son requeridos.",
     );
@@ -43,6 +43,6 @@ exports.createOrUpdateHostUser = functions.https.onCall(async (data, context) =>
       return {message: `Usuario anfitrión '${email}' creado con éxito.`};
     }
     // Si es otro tipo de error, lo lanzamos
-    throw new functions.https.HttpsError("internal", error.message);
+    throw new HttpsError("internal", error.message);
   }
-});
+});
