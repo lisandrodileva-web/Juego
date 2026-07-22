@@ -12,6 +12,10 @@
 
     <!-- ⭐️ CORRECCIÓN: Añadido el enlace a style.css para cargar la fuente de Pokémon -->
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Cropper.js CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 
     <style>
         /* (Estilos sin cambios) */
@@ -1371,6 +1375,21 @@
             <ul id="existing-events-list" class="space-y-2">
                 <li class="p-2 text-gray-500 italic text-center">Cargando eventos...</li>
             </ul>
+        </div>
+    </div>
+
+    <!-- ⭐️ NUEVO: Modal de Recorte de Imagen (Cropper) ⭐️ -->
+    <div id="cropper-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-[11000]" style="display: none;">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-lg w-full flex flex-col max-h-[90vh] mx-4 text-gray-800">
+            <h3 class="text-xl font-bold mb-4">Ajustar Imagen de Fondo</h3>
+            <div class="flex-grow overflow-hidden bg-gray-100 rounded-lg flex items-center justify-center" style="max-height: 50vh;">
+                <img id="cropper-image" class="max-w-full max-h-full" style="display: block;">
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Arrastra y ajusta el recuadro para seleccionar la parte de la foto que se usarán como fondo del portal.</p>
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" id="cropper-cancel-btn" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">Cancelar</button>
+                <button type="button" id="cropper-confirm-btn" class="px-4 py-2 bg-yellow-500 text-gray-900 font-bold rounded-lg hover:bg-yellow-600 transition-colors">Confirmar Recorte</button>
+            </div>
         </div>
     </div>
 

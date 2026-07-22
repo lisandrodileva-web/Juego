@@ -51,6 +51,10 @@ const loginError = document.getElementById('login-error');
 // ⭐️ NUEVO: Variable de control para asegurar una única inicialización
 let isPanelInitialized = false;
 
+// ⭐️ NUEVO: Variables globales para el control de recorte de imagen
+let croppedBgImageBlob = null;
+let cropperInstance = null;
+
 /**
  * 1. Escuchar cambios de estado de Auth
  * Esto decide si mostrar el Login o el Panel de Admin
@@ -412,6 +416,94 @@ const applyTemplateBtn = document.getElementById('apply-template-btn');
     initializeHexDisplays(); // ⭐️ NUEVO: Activar los visualizadores de HEX
     applyTemplateBtn.addEventListener('click', applyThemeTemplate);
 
+    // ⭐️ NUEVO: Eventos para el recorte de imagen de fondo
+    document.getElementById('bg-image').addEventListener('change', handleBgImageChange);
+    document.getElementById('cropper-cancel-btn').addEventListener('click', handleBgImageCropCancel);
+    document.getElementById('cropper-confirm-btn').addEventListener('click', handleBgImageCropConfirm);
+
+    /**
+     * Manejador de cambio de archivo para la imagen de fondo (activa Cropper.js)
+     */
+    function handleBgImageChange(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Por favor selecciona una imagen válida.');
+            e.target.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const cropperModal = document.getElementById('cropper-modal');
+            const cropperImage = document.getElementById('cropper-image');
+            
+            cropperImage.src = event.target.result;
+            cropperModal.style.display = 'flex';
+            
+            if (cropperInstance) {
+                cropperInstance.destroy();
+            }
+            
+            // Inicializar Cropper.js
+            cropperInstance = new Cropper(cropperImage, {
+                viewMode: 1,
+                dragMode: 'move',
+                autoCropArea: 0.9,
+                restore: false,
+                guides: true,
+                center: true,
+                highlight: false,
+                cropBoxMovable: true,
+                cropBoxResizable: true,
+                toggleDragModeOnDblclick: false
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+
+    /**
+     * Cancelar el recorte de imagen de fondo
+     */
+    function handleBgImageCropCancel() {
+        document.getElementById('cropper-modal').style.display = 'none';
+        document.getElementById('bg-image').value = '';
+        croppedBgImageBlob = null;
+        if (cropperInstance) {
+            cropperInstance.destroy();
+            cropperInstance = null;
+        }
+    }
+
+    /**
+     * Confirmar el recorte de imagen de fondo y generar el Blob de subida
+     */
+    function handleBgImageCropConfirm() {
+        if (!cropperInstance) return;
+        
+        const canvas = cropperInstance.getCroppedCanvas({
+            maxWidth: 1920,
+            maxHeight: 1920,
+            imageSmoothingEnabled: true,
+            imageSmoothingQuality: 'high'
+        });
+        
+        canvas.toBlob((blob) => {
+            croppedBgImageBlob = blob;
+            
+            const preview = document.getElementById('bg-image-preview');
+            const previewUrl = URL.createObjectURL(blob);
+            preview.innerHTML = `
+                <p class="text-xs text-green-600 font-bold">✓ Imagen recortada lista para guardar:</p>
+                <img src="${previewUrl}" class="w-full h-24 object-cover rounded-lg border-2 border-green-500 shadow-md mt-1">
+            `;
+            
+            document.getElementById('cropper-modal').style.display = 'none';
+            cropperInstance.destroy();
+            cropperInstance = null;
+        }, 'image/jpeg', 0.85);
+    }
 
     /**
      * Carga los settings de un Evento
@@ -465,6 +557,7 @@ const applyTemplateBtn = document.getElementById('apply-template-btn');
      * Rellena el formulario con datos de Firebase
      */
     function populateForm(config) {
+        croppedBgImageBlob = null; // Resetear recorte previo
         // Extraer secciones con valores por defecto
         const theme = config.theme || {};
         const features = config.features || {};
@@ -737,6 +830,7 @@ const applyTemplateBtn = document.getElementById('apply-template-btn');
      * Limpia el formulario a sus valores por defecto
      */
     function resetFormToDefaults() {
+        croppedBgImageBlob = null; // Resetear recorte previo
         form.reset(); 
         document.getElementById('games-enabled').checked = true;
         document.getElementById('event-active').checked = true;
@@ -1019,22 +1113,22 @@ const applyTemplateBtn = document.getElementById('apply-template-btn');
         // ⭐️ FIN: NUEVA LÓGICA ⭐️
 
         try {
-            const imageFile = document.getElementById('bg-image').files[0];
-            if (imageFile) {
-                // Si hay un archivo nuevo, lo subimos y actualizamos la URL en la configuración.
-                statusMsg.textContent = 'Subiendo nueva imagen de fondo...';
-                const imagePath = `events/${eventId}/theme/background.${imageFile.name.split('.').pop()}`;
+            if (croppedBgImageBlob) {
+                // Si hay una imagen recortada, la subimos
+                statusMsg.textContent = 'Subiendo imagen de fondo recortada...';
+                const imagePath = `events/${eventId}/theme/background.jpg`;
                 const sRef = storageRef(storage, imagePath);
                 
-                const uploadTask = await uploadBytesResumable(sRef, imageFile); 
+                const uploadTask = await uploadBytesResumable(sRef, croppedBgImageBlob); 
                 const downloadURL = await getDownloadURL(uploadTask.ref);
                 
                 fullConfig.theme.background_image_url = downloadURL; 
-                statusMsg.textContent = 'Imagen subida. Guardando config...';
+                statusMsg.textContent = 'Imagen de fondo recortada subida. Guardando config...';
+                croppedBgImageBlob = null; // Limpiar despues de subir con éxito
             } else {
-                // Si NO hay archivo nuevo, nos aseguramos de mantener la URL existente.
+                // Si NO hay archivo nuevo, nos aseguramos de mantener la URL existente si no es un blob local.
                 const previewImg = document.getElementById('bg-image-preview').querySelector('img');
-                if (previewImg && previewImg.src) {
+                if (previewImg && previewImg.src && !previewImg.src.startsWith('blob:')) {
                     fullConfig.theme.background_image_url = previewImg.src;
                 } else {
                     fullConfig.theme.background_image_url = null; // Si no hay ni preview, la eliminamos.
