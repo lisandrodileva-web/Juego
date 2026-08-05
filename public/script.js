@@ -43,6 +43,44 @@ if (window.location.hostname === "localhost" || window.location.hostname === "12
 let EVENT_ID;
 let questionsRef, rankingsRef, memoryImagesRef, memoryRankingsRef, hangmanWordsRef;
 
+// ⭐️ NUEVO: Inyectar spinner de carga inmediatamente para evitar pantalla en blanco
+(function showSpinner() {
+    // Si ya existe o estamos en una página que no es de juego que requiera esto, no hacer nada
+    if (document.getElementById('loading-spinner')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'spinner-styles';
+    style.innerHTML = `
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background-color: rgba(255, 255, 255, 0.95);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 999999;
+            transition: opacity 0.3s ease-out;
+        }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #F59E0B;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'loading-spinner';
+    overlay.className = 'loading-overlay';
+    overlay.innerHTML = '<div class="spinner"></div>';
+    document.body.appendChild(overlay);
+})();
+
 // Variables globales de estado de juegos (sin cambios)
 let quizQuestions = []; 
 let currentQuestionIndex = 0;
@@ -95,6 +133,38 @@ function getEventId() {
 }
 
 /**
+ * ⭐️ NUEVO: Carga dinámicamente las fuentes de Google Fonts requeridas.
+ * @param {Array} fonts - Lista de familias de fuentes configuradas.
+ */
+function loadGoogleFonts(fonts) {
+    const fontNames = new Set();
+    fonts.forEach(fontString => {
+        if (!fontString) return;
+        let firstFont = fontString.split(',')[0].trim();
+        firstFont = firstFont.replace(/^['"]|['"]$/g, '').trim();
+        const localFonts = ['pokemon solid', 'lasirenita', 'sans-serif', 'serif', 'monospace', 'cursive', 'fantasy'];
+        if (firstFont && !localFonts.includes(firstFont.toLowerCase())) {
+            fontNames.add(firstFont);
+        }
+    });
+
+    if (fontNames.size === 0) return;
+
+    const families = Array.from(fontNames)
+        .map(name => `family=${name.replace(/\s+/g, '+')}`)
+        .join('&');
+    const url = `https://fonts.googleapis.com/css2?${families}&display=swap`;
+
+    let linkTag = document.querySelector('link[href^="https://fonts.googleapis.com/css2?"]');
+    if (!linkTag) {
+        linkTag = document.createElement('link');
+        linkTag.rel = 'stylesheet';
+        document.head.appendChild(linkTag);
+    }
+    linkTag.href = url;
+}
+
+/**
  * ⭐️ Motor de Temas Dinámico
  * (Tu código original, sin cambios)
  */
@@ -103,6 +173,20 @@ function applyDynamicTheme(themeConfig, textsConfig) { // ⭐️ CORRECCIÓN: Ac
         console.warn("No se encontró tema, usando defaults.");
         return;
     }
+
+    // Cargar dinámicamente fuentes de Google Fonts
+    const fontsToLoad = [];
+    if (themeConfig && themeConfig.font_family) {
+        fontsToLoad.push(themeConfig.font_family);
+    }
+    if (textsConfig) {
+        for (const key in textsConfig) {
+            if (key.endsWith('font_family') && textsConfig[key]) {
+                fontsToLoad.push(textsConfig[key]);
+            }
+        }
+    }
+    loadGoogleFonts(fontsToLoad);
 
     const styleTag = document.createElement('style');
     let cssVariables = ":root {\n";
@@ -113,13 +197,12 @@ function applyDynamicTheme(themeConfig, textsConfig) { // ⭐️ CORRECCIÓN: Ac
             continue;
         }
         const value = themeConfig[key];
-        if (!value) {
+        if (!value || key === 'background_image_url') {
             continue; 
         }
         const cssVarName = `--${key.replace(/_/g, '-')}`; 
         cssVariables += `    ${cssVarName}: ${value};\n`;
     }
-    cssVariables += "}\n";
     
     // ⭐️ CORRECCIÓN: Iterar sobre las claves de TEXTOS (Esta era la parte que faltaba)
     if (textsConfig) {
@@ -127,6 +210,7 @@ function applyDynamicTheme(themeConfig, textsConfig) { // ⭐️ CORRECCIÓN: Ac
             if (textsConfig[key]) cssVariables += `    --${key.replace(/_/g, '-')}: ${textsConfig[key]};\n`;
         }
     }
+    cssVariables += "}\n";
 
     // 2. Manejar la fuente
     if (themeConfig.font_family) { 
@@ -138,21 +222,27 @@ function applyDynamicTheme(themeConfig, textsConfig) { // ⭐️ CORRECCIÓN: Ac
     }
 
     // 3. Manejar la imagen de fondo
+    const primaryColor = themeConfig.color_primary || '#FACC15';
+    const secondaryColor = themeConfig.color_secondary || '#F59E0B';
+
     if (themeConfig.background_image_url) {
          cssVariables += `
             body {
                 background-image: url('${themeConfig.background_image_url}') !important;
-                background-size: ${themeConfig.background_image_size || 'cover'};
-                background-position: ${themeConfig.background_image_position || 'center'};
-                background-repeat: no-repeat;
+                background-size: ${themeConfig.background_image_size || 'cover'} !important;
+                background-position: ${themeConfig.background_image_position || 'center'} !important;
+                background-repeat: no-repeat !important;
+                background-attachment: fixed !important;
             }
         `;
     } else {
          cssVariables += `
             body {
-                background: linear-gradient(-45deg, var(--portal-bg, #ffffff), var(--btn-portal-bg, #e2e8f0), var(--color-success, #34d399), var(--portal-bg, #ffffff)) !important;
-                background-size: 400% 400% !important;
-                animation: gradientShift 15s ease infinite !important;
+                background-image: linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%) !important;
+                background-color: ${primaryColor} !important;
+                background-size: cover !important;
+                background-attachment: fixed !important;
+                background-repeat: no-repeat !important;
             }
         `;
     }
@@ -176,6 +266,7 @@ function applyDynamicTheme(themeConfig, textsConfig) { // ⭐️ CORRECCIÓN: Ac
             if (sticker.bottom) stickerImg.style.bottom = sticker.bottom;
             if (sticker.left) stickerImg.style.left = sticker.left;
             if (sticker.right) stickerImg.style.right = sticker.right;
+            if (sticker.opacity !== undefined) stickerImg.style.opacity = sticker.opacity;
 
             document.body.appendChild(stickerImg);
         });
@@ -201,7 +292,7 @@ function applyDynamicTheme(themeConfig, textsConfig) { // ⭐️ CORRECCIÓN: Ac
         const updateIcons = (className, icon) => {
             document.querySelectorAll(className).forEach(el => {
                 if (icon && icon.trim() !== '') {
-                    el.textContent = icon;
+                    el.innerHTML = icon;
                     el.style.display = ''; // Asegurarse de que sea visible
                 } else {
                     el.style.display = 'none'; // Ocultar si no hay icono
@@ -215,17 +306,155 @@ function applyDynamicTheme(themeConfig, textsConfig) { // ⭐️ CORRECCIÓN: Ac
         updateIcons('.icon-hangman', icons.icon_hangman);
         updateIcons('.icon-ranking', icons.icon_ranking);
         updateIcons('.icon-win', icons.icon_win);
-        updateIcons('.icon-games', icons.icon_games);
         updateIcons('.icon-memories', icons.icon_memories);
     }
 }
-
-
 /**
- * ⭐️ FUNCIÓN loadEventConfig (MODIFICADA) ⭐️
- * (Tu código original, sin cambios)
+ * ⭐️ FUNCIÓN AUXILIAR: Aplica toda la configuración (tema, textos) a las páginas de juegos
+ * @param {object} config - La configuración completa del evento (con theme, texts, features, status)
  */
+export function applyConfigToGames(config) {
+    if (!config) return;
+
+    // --- 1. APLICAR TEMA VISUAL ---
+    applyDynamicTheme(config.theme || {}, config.texts || {});
+    
+    // Iniciar partículas flotantes temáticas
+    const showParticles = (config.theme && config.theme.show_particles !== false);
+    if (showParticles) {
+        const particlesIcon = (config.theme && config.theme.icons) ? (config.theme.icons.icon_particles || config.theme.icons.icon_main) : '🐝';
+        initFloatingParticles(particlesIcon);
+    } else {
+        const existing = document.getElementById('particles-container');
+        if (existing) existing.remove();
+    }
+
+    // --- 2. APLICAR TEXTOS DINÁMICOS Y SUS ESTILOS ---
+    if (config.texts) {
+        // Trivia
+        const triviaTitle = document.getElementById('trivia-title-text');
+        if (triviaTitle) {
+            triviaTitle.innerHTML = config.texts.trivia_title || '';
+            triviaTitle.style.fontFamily = config.texts.trivia_title_font_family || '';
+            triviaTitle.style.letterSpacing = config.texts.trivia_title_letter_spacing || '';
+            triviaTitle.style.fontSize = config.texts.trivia_title_font_size || '';
+            if (config.texts.trivia_title_stroke_width && config.texts.trivia_title_stroke_color) {
+                triviaTitle.style.webkitTextStroke = `${config.texts.trivia_title_stroke_width} ${config.texts.trivia_title_stroke_color}`;
+            } else {
+                triviaTitle.style.webkitTextStroke = '';
+            }
+        }
+
+        const triviaWelcome = document.getElementById('trivia-welcome-text');
+        if (triviaWelcome) {
+            triviaWelcome.innerHTML = config.texts.trivia_welcome || '';
+            triviaWelcome.style.fontFamily = config.texts.trivia_welcome_font_family || '';
+            triviaWelcome.style.letterSpacing = config.texts.trivia_welcome_letter_spacing || '';
+            if (config.texts.trivia_welcome_stroke_width && config.texts.trivia_welcome_stroke_color) {
+                triviaWelcome.style.webkitTextStroke = `${config.texts.trivia_welcome_stroke_width} ${config.texts.trivia_welcome_stroke_color}`;
+            } else {
+                triviaWelcome.style.webkitTextStroke = '';
+            }
+        }
+
+        const triviaSubtitle = document.getElementById('trivia-subtitle-text');
+        if (triviaSubtitle) triviaSubtitle.innerHTML = config.texts.trivia_subtitle || '';
+
+        // Memoria
+        const memoryTitle = document.getElementById('memory-title-text');
+        if (memoryTitle) {
+            memoryTitle.innerHTML = config.texts.memory_title || '';
+            memoryTitle.style.fontFamily = config.texts.memory_title_font_family || '';
+            memoryTitle.style.letterSpacing = config.texts.memory_title_letter_spacing || '';
+            memoryTitle.style.fontSize = config.texts.memory_title_font_size || '';
+            if (config.texts.memory_title_stroke_width && config.texts.memory_title_stroke_color) {
+                memoryTitle.style.webkitTextStroke = `${config.texts.memory_title_stroke_width} ${config.texts.memory_title_stroke_color}`;
+            } else {
+                memoryTitle.style.webkitTextStroke = '';
+            }
+        }
+
+        // Ahorcado
+        const hangmanTitle = document.getElementById('hangman-title-text');
+        if (hangmanTitle) {
+            hangmanTitle.innerHTML = config.texts.hangman_title || '';
+            hangmanTitle.style.fontFamily = config.texts.hangman_title_font_family || '';
+            hangmanTitle.style.letterSpacing = config.texts.hangman_title_letter_spacing || '';
+            hangmanTitle.style.fontSize = config.texts.hangman_title_font_size || '';
+            if (config.texts.hangman_title_stroke_width && config.texts.hangman_title_stroke_color) {
+                hangmanTitle.style.webkitTextStroke = `${config.texts.hangman_title_stroke_width} ${config.texts.hangman_title_stroke_color}`;
+            } else {
+                hangmanTitle.style.webkitTextStroke = '';
+            }
+        }
+
+        const hangmanSubtitle = document.getElementById('hangman-subtitle-text');
+        if (hangmanSubtitle) {
+            hangmanSubtitle.innerHTML = config.texts.hangman_subtitle || '';
+            hangmanSubtitle.style.fontFamily = config.texts.hangman_subtitle_font_family || '';
+            hangmanSubtitle.style.letterSpacing = config.texts.hangman_subtitle_letter_spacing || '';
+            if (config.texts.hangman_subtitle_stroke_width && config.texts.hangman_subtitle_stroke_color) {
+                hangmanSubtitle.style.webkitTextStroke = `${config.texts.hangman_subtitle_stroke_width} ${config.texts.hangman_subtitle_stroke_color}`;
+            } else {
+                hangmanSubtitle.style.webkitTextStroke = '';
+            }
+        }
+
+        // Rankings
+        const rankingTitle = document.getElementById('ranking-title-text');
+        if (rankingTitle) {
+            rankingTitle.innerHTML = config.texts.ranking_title || 'Rankings';
+            rankingTitle.style.fontFamily = config.texts.ranking_title_font_family || '';
+            rankingTitle.style.letterSpacing = config.texts.ranking_title_letter_spacing || '';
+            rankingTitle.style.fontSize = config.texts.ranking_title_font_size || '';
+            rankingTitle.style.color = config.texts.ranking_title_color || '';
+            if (config.texts.ranking_title_stroke_width && config.texts.ranking_title_stroke_color) {
+                rankingTitle.style.webkitTextStroke = `${config.texts.ranking_title_stroke_width} ${config.texts.ranking_title_stroke_color}`;
+            } else {
+                rankingTitle.style.webkitTextStroke = '';
+            }
+        }
+
+        // Host
+        const hostLoginTitle = document.getElementById('host-login-title-text');
+        if (hostLoginTitle && config.texts.host_login_title) {
+            hostLoginTitle.innerHTML = config.texts.host_login_title;
+        }
+        const hostPanelTitle = document.getElementById('host-panel-title-text');
+        if (hostPanelTitle && config.texts.host_panel_title) {
+            hostPanelTitle.innerHTML = config.texts.host_panel_title;
+        }
+
+        const isHostPage = window.location.pathname.includes('host.html');
+        if (isHostPage && config.texts.host_document_title) {
+            document.title = config.texts.host_document_title;
+        }
+    }
+}
+
+// Escuchar mensajes en tiempo real desde el super-admin
+window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'applyPreviewConfig') {
+        applyConfigToGames(event.data.config);
+    }
+});
+
 export async function loadEventConfig(eventId) {
+    if (eventId === 'preview') {
+        window.eventConfig = {
+            status: { is_active: true },
+            features: { games_enabled: true, camera_enabled: true, projector_enabled: true },
+            theme: {
+                color_primary: '#FACC15',
+                color_secondary: '#F59E0B',
+                color_text: '#1F2937',
+                font_family: "'Inter', sans-serif"
+            },
+            texts: {}
+        };
+        applyConfigToGames(window.eventConfig);
+        return;
+    }
     const configRef = ref(database, `events/${eventId}/config`);
     let config = {};
     window.eventConfig = {}; // ⭐️ NUEVO: Guardar config globalmente
@@ -265,13 +494,13 @@ export async function loadEventConfig(eventId) {
         throw new Error("El evento está deshabilitado.");
     }
 
-    // --- 2. APLICAR TEMA VISUAL ---
-    applyDynamicTheme(config.theme || {}, config.texts || {}); // ⭐️ CORRECCIÓN: Pasar ambos objetos de configuración
-    
-    // Iniciar partículas flotantes temáticas
-    const mainIcon = (config.theme && config.theme.icons) ? config.theme.icons.icon_main : '🐝';
-    initFloatingParticles(mainIcon);
-    
+    // --- 2. APLICAR CONFIGURACIÓN ---
+    applyConfigToGames(config);
+
+    if (typeof window.hideGlobalPageLoader === 'function') {
+        window.hideGlobalPageLoader();
+    }
+
     // --- 3. APLICAR FUNCIONALIDADES (Juegos) ---
     if (config.features && config.features.games_enabled === false) {
         if (isHost) {
@@ -318,125 +547,12 @@ export async function loadEventConfig(eventId) {
         }
     }
 
-    // --- 4. ⭐️ NUEVO: APLICAR FUNCIONALIDAD DE PROYECTOR ---
+    // --- 4. APLICAR FUNCIONALIDAD DE PROYECTOR ---
     if (config.features && config.features.projector_enabled === false) {
-        // Si el proyector está deshabilitado, oculta el botón del menú principal del host.
         const showProjectorMenuBtn = document.getElementById('show-projector-menu-btn');
         if (showProjectorMenuBtn) {
             showProjectorMenuBtn.style.display = 'none';
         }
-    }
-
-    // --- 4. ⭐️ NUEVO: APLICAR TEXTOS DINÁMICOS ---
-    if (config.texts) {
-        const triviaTitle = document.getElementById('trivia-title-text');
-        if (triviaTitle) {
-            triviaTitle.innerHTML = config.texts.trivia_title || '';
-            // ⭐️ CORRECCIÓN DEFINITIVA: Aplicar estilos de fuente y espaciado
-            if(config.texts.trivia_title_font_family) triviaTitle.style.fontFamily = config.texts.trivia_title_font_family;
-            if(config.texts.trivia_title_letter_spacing) triviaTitle.style.letterSpacing = config.texts.trivia_title_letter_spacing;
-            // ⭐️ NUEVO: Aplicar tamaño de fuente
-            if(config.texts.trivia_title_font_size) triviaTitle.style.fontSize = config.texts.trivia_title_font_size;
-            // ⭐️ NUEVO: Aplicar contorno específico
-            if(config.texts.trivia_title_stroke_width && config.texts.trivia_title_stroke_color) {
-                triviaTitle.style.webkitTextStroke = `${config.texts.trivia_title_stroke_width} ${config.texts.trivia_title_stroke_color}`;
-            }
-        }
-
-        const triviaWelcome = document.getElementById('trivia-welcome-text');
-        if (triviaWelcome) {
-            triviaWelcome.innerHTML = config.texts.trivia_welcome || '';
-            // ⭐️ CORRECCIÓN DEFINITIVA: Aplicar estilos de fuente y espaciado
-            if(config.texts.trivia_welcome_font_family) triviaWelcome.style.fontFamily = config.texts.trivia_welcome_font_family;
-            if(config.texts.trivia_welcome_letter_spacing) triviaWelcome.style.letterSpacing = config.texts.trivia_welcome_letter_spacing;
-            // ⭐️ NUEVO: Aplicar contorno específico
-            if(config.texts.trivia_welcome_stroke_width && config.texts.trivia_welcome_stroke_color) {
-                triviaWelcome.style.webkitTextStroke = `${config.texts.trivia_welcome_stroke_width} ${config.texts.trivia_welcome_stroke_color}`;
-            }
-        }
-
-        const triviaSubtitle = document.getElementById('trivia-subtitle-text');
-        if (triviaSubtitle) triviaSubtitle.innerHTML = config.texts.trivia_subtitle || ''; // Este no tiene personalización de fuente
-
-        // Textos de Memoria
-        const memoryTitle = document.getElementById('memory-title-text');
-        if (memoryTitle) {
-            memoryTitle.innerHTML = config.texts.memory_title || '';
-            // ⭐️ CORRECCIÓN DEFINITIVA: Aplicar estilos de fuente y espaciado
-            if(config.texts.memory_title_font_family) memoryTitle.style.fontFamily = config.texts.memory_title_font_family;
-            if(config.texts.memory_title_letter_spacing) memoryTitle.style.letterSpacing = config.texts.memory_title_letter_spacing;
-            // ⭐️ NUEVO: Aplicar tamaño de fuente
-            if(config.texts.memory_title_font_size) memoryTitle.style.fontSize = config.texts.memory_title_font_size;
-            // ⭐️ NUEVO: Aplicar contorno específico
-            if(config.texts.memory_title_stroke_width && config.texts.memory_title_stroke_color) {
-                memoryTitle.style.webkitTextStroke = `${config.texts.memory_title_stroke_width} ${config.texts.memory_title_stroke_color}`;
-            }
-        }
-
-        // ⭐️ NUEVO: Textos de Ahorcado
-        const hangmanTitle = document.getElementById('hangman-title-text');
-        if (hangmanTitle) {
-            hangmanTitle.innerHTML = config.texts.hangman_title || '';
-            // ⭐️ CORRECCIÓN DEFINITIVA: Aplicar estilos de fuente y espaciado
-            if(config.texts.hangman_title_font_family) hangmanTitle.style.fontFamily = config.texts.hangman_title_font_family;
-            if(config.texts.hangman_title_letter_spacing) hangmanTitle.style.letterSpacing = config.texts.hangman_title_letter_spacing;
-            // ⭐️ NUEVO: Aplicar tamaño de fuente
-            if(config.texts.hangman_title_font_size) hangmanTitle.style.fontSize = config.texts.hangman_title_font_size;
-            // ⭐️ NUEVO: Aplicar contorno específico
-            if(config.texts.hangman_title_stroke_width && config.texts.hangman_title_stroke_color) {
-                hangmanTitle.style.webkitTextStroke = `${config.texts.hangman_title_stroke_width} ${config.texts.hangman_title_stroke_color}`;
-            }
-        }
-
-        const hangmanSubtitle = document.getElementById('hangman-subtitle-text');
-        if (hangmanSubtitle) {
-            hangmanSubtitle.innerHTML = config.texts.hangman_subtitle || '';
-            // ⭐️ CORRECCIÓN DEFINITIVA: Aplicar estilos de fuente y espaciado
-            if(config.texts.hangman_subtitle_font_family) hangmanSubtitle.style.fontFamily = config.texts.hangman_subtitle_font_family;
-            if(config.texts.hangman_subtitle_letter_spacing) hangmanSubtitle.style.letterSpacing = config.texts.hangman_subtitle_letter_spacing;
-            // ⭐️ NUEVO: Aplicar contorno específico
-            if(config.texts.hangman_subtitle_stroke_width && config.texts.hangman_subtitle_stroke_color) {
-                hangmanSubtitle.style.webkitTextStroke = `${config.texts.hangman_subtitle_stroke_width} ${config.texts.hangman_subtitle_stroke_color}`;
-            }
-        }
-
-        // ⭐️ NUEVO: Textos de Ranking
-        const rankingTitle = document.getElementById('ranking-title-text');
-        if (rankingTitle) {
-            rankingTitle.innerHTML = config.texts.ranking_title || 'Rankings';
-            
-            // ⭐️ SOLUCIÓN: Aplicar la fuente de forma consistente, igual que en los otros juegos.
-            // Solo aplicamos una fuente si está definida específicamente para este título.
-            // Si no, heredará la fuente global del body, manteniendo la consistencia.
-            if (config.texts.ranking_title_font_family) {
-                rankingTitle.style.fontFamily = config.texts.ranking_title_font_family;
-            }
-
-            if (config.texts.ranking_title_letter_spacing) rankingTitle.style.letterSpacing = config.texts.ranking_title_letter_spacing;
-            if (config.texts.ranking_title_font_size) rankingTitle.style.fontSize = config.texts.ranking_title_font_size;
-            if (config.texts.ranking_title_color) rankingTitle.style.color = config.texts.ranking_title_color;
-            // ⭐️ NUEVO: Aplicar contorno específico
-            if (config.texts.ranking_title_stroke_width && config.texts.ranking_title_stroke_color) {
-                rankingTitle.style.webkitTextStroke = `${config.texts.ranking_title_stroke_width} ${config.texts.ranking_title_stroke_color}`;
-            }
-        }
-
-        // ⭐️ NUEVO: Textos de Anfitrión
-        const hostLoginTitle = document.getElementById('host-login-title-text');
-        if (hostLoginTitle && config.texts.host_login_title) {
-            hostLoginTitle.innerHTML = config.texts.host_login_title;
-        }
-        const hostPanelTitle = document.getElementById('host-panel-title-text');
-        if (hostPanelTitle && config.texts.host_panel_title) {
-            hostPanelTitle.innerHTML = config.texts.host_panel_title;
-        }
-
-        // ⭐️ NUEVO: Título del documento para Host
-        const isHostPage = window.location.pathname.includes('host.html');
-        if (isHostPage && config.texts.host_document_title) {
-            document.title = config.texts.host_document_title;
-        }
-
     }
 }
 
@@ -454,6 +570,17 @@ function fixFirebaseArray(data) {
 }
 
 function listenForQuestions(callback) {
+    if (EVENT_ID === 'preview') {
+        quizQuestions = [{
+            id: 'mock-q1',
+            question: '¿De qué color es la abeja de Tu Fiesta Digital?',
+            options: ['Amarilla y negra', 'Azul y roja', 'Verde y morada', 'Blanca y gris'],
+            correct: 0,
+            timer: 15
+        }];
+        if (callback) callback(quizQuestions);
+        return;
+    }
     onValue(questionsRef, (snapshot) => {
         const data = snapshot.val();
         quizQuestions = [];
@@ -520,6 +647,15 @@ async function saveFinalResult(data) {
 }
 
 function listenForRankings(renderCallback) {
+    if (EVENT_ID === 'preview') {
+        const mockResults = [
+            { name: 'Lisandro Dileva', score: 10, time: 24 },
+            { name: 'Ana Gomez', score: 9, time: 30 },
+            { name: 'Juan Perez', score: 8, time: 35 }
+        ];
+        renderCallback(mockResults);
+        return;
+    }
     onValue(rankingsRef, (snapshot) => {
         const data = snapshot.val();
         let rankingList = [];
@@ -602,6 +738,15 @@ async function uploadMemoryImages(files, progressCallback, statusCallback) {
 }
 
 function listenForMemoryImages(renderCallback) {
+    if (EVENT_ID === 'preview') {
+        const mockImages = [
+            { id: 'm1', name: 'Abeja', url: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?w=300' },
+            { id: 'm2', name: 'Fiesta', url: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=300' },
+            { id: 'm3', name: 'Regalo', url: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=300' }
+        ];
+        renderCallback(mockImages);
+        return;
+    }
     onValue(memoryImagesRef, (snapshot) => {
         const images = [];
         if (snapshot.exists()) {
@@ -653,6 +798,15 @@ async function deleteSingleMemoryImage(id, storagePath) {
 }
 
 function listenForMemoryRankings(renderCallback) {
+    if (EVENT_ID === 'preview') {
+        const mockResults = [
+            { name: 'Lisandro Dileva', time: 15 },
+            { name: 'Ana Gomez', time: 22 },
+            { name: 'Juan Perez', time: 29 }
+        ];
+        renderCallback(mockResults);
+        return;
+    }
     onValue(memoryRankingsRef, (snapshot) => {
         const results = [];
         if (snapshot.exists()) {
@@ -764,6 +918,19 @@ function initializeHost() {
             });
         });
     }
+    // --- Fin de la lógica del enlace de proyector ---
+
+    // --- ⭐️ EXPORT BUTTONS ---
+    const exportHtmlBtn = document.getElementById('export-memories-btn');
+    if (exportHtmlBtn) {
+        exportHtmlBtn.addEventListener('click', () => exportMemoriesToHTML(EVENT_ID));
+    }
+    const exportVideoBtn = document.getElementById('export-memories-video-btn');
+    if (exportVideoBtn) {
+        exportVideoBtn.addEventListener('click', () => exportMemoriesToVideo(EVENT_ID));
+    }
+    // --- Fin de los botones de export ---
+
     // Actualiza el título del header
     // ⭐️ CORREGIDO: Ahora usa el texto personalizado y reemplaza {EVENT_ID}
     const hostPanelTitle = document.getElementById('host-panel-title-text');
@@ -807,7 +974,7 @@ function initializeHost() {
     });
 
     clearAllBtn.addEventListener('click', async () => {
-        if (confirm('¿Estás seguro de que quieres ELIMINAR TODAS las preguntas de la TRIVIA?')) {
+        if (await customConfirm('¿Estás seguro de que quieres ELIMINAR TODAS las preguntas de la TRIVIA?')) {
             try {
                 await set(questionsRef, null); 
             } catch (error) {
@@ -861,14 +1028,6 @@ function initializeHost() {
 
     listenForMemoryImages(renderMemoryImagesList);
 
-    // --- ⭐️ NUEVO: Lógica de Exportación de Recuerdos ---
-    const exportBtn = document.getElementById('export-memories-btn');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', async () => {
-            await exportMemoriesToHTML(EVENT_ID);
-        });
-    }
-    // --- Fin de la lógica de exportación ---
 
     memoryForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -899,8 +1058,8 @@ function initializeHost() {
         }
     });
 
-    clearMemoryImagesBtn.addEventListener('click', () => {
-        if (confirm('¿Estás seguro de que quieres ELIMINAR TODAS las imágenes del juego de memoria? Esta acción no se puede deshacer.')) {
+    clearMemoryImagesBtn.addEventListener('click', async () => {
+        if (await customConfirm('¿Estás seguro de que quieres ELIMINAR TODAS las imágenes del juego de memoria? Esta acción no se puede deshacer.')) {
             clearAllMemoryImages(); 
         }
     });
@@ -909,7 +1068,7 @@ function initializeHost() {
         if (e.target.classList.contains('delete-btn')) {
             const id = e.target.dataset.id;
             const path = e.target.dataset.path;
-            if (confirm(`¿Seguro que quieres borrar la imagen ${e.target.dataset.name}?`)) {
+            if (await customConfirm(`¿Seguro que quieres borrar la imagen ${e.target.dataset.name}?`)) {
                 await deleteSingleMemoryImage(id, path);
             }
         }
@@ -987,6 +1146,13 @@ function initializeHost() {
     });
     
     function listenForHangmanWords(renderCallback) {
+        if (EVENT_ID === 'preview') {
+            renderCallback([
+                { id: 'hw1', word: 'FIESTA' },
+                { id: 'hw2', word: 'DIGITAL' }
+            ]);
+            return;
+        }
         onValue(hangmanWordsRef, (snapshot) => {
             const words = [];
             if (snapshot.exists()) {
@@ -1107,10 +1273,17 @@ export function initializePlayer() {
     if (startForm) {
         // ⭐️ NUEVO: Pre-llenar nombre si ya jugó antes
         const storedName = localStorage.getItem(`playerName_${EVENT_ID}`);
+        const nameInputContainer = document.getElementById('player-name-input-container');
+        const nameBadge = document.getElementById('player-name-badge');
+        const nameBadgeText = document.getElementById('player-name-badge-text');
+
         if (storedName && nameInput) {
             nameInput.value = storedName;
-            nameInput.disabled = true; // 🔒 Bloquear el input para que no puedan cambiarlo
-            nameInput.style.backgroundColor = "#f0f0f0"; // Feedback visual
+            if (nameInputContainer) nameInputContainer.classList.add('hidden');
+            if (nameBadge) nameBadge.classList.remove('hidden');
+            if (nameBadgeText) nameBadgeText.textContent = storedName;
+        } else {
+            if (nameInput) nameInput.required = true;
         }
 
         listenForQuestions(initializePlayerScreen);
@@ -1271,13 +1444,23 @@ async function setupMemoryGame() {
     gridContainer.style.opacity = '1';
 
     try {
-        const snapshot = await get(memoryImagesRef);
-        if (!snapshot.exists()) {
-            gridContainer.innerHTML = '<p class="text-center text-red-500">Error: No se han cargado imágenes en el portal del anfitrión.</p>';
-            return;
+        let imageUrls = [];
+        if (EVENT_ID === 'preview') {
+            imageUrls = [
+                'https://picsum.photos/id/1025/150/150',
+                'https://picsum.photos/id/1062/150/150',
+                'https://picsum.photos/id/1074/150/150',
+                'https://picsum.photos/id/1084/150/150'
+            ];
+        } else {
+            const snapshot = await get(memoryImagesRef);
+            if (!snapshot.exists()) {
+                gridContainer.innerHTML = '<p class="text-center text-red-500">Error: No se han cargado imágenes en el portal del anfitrión.</p>';
+                return;
+            }
+            const imagesObject = snapshot.val();
+            imageUrls = Object.values(imagesObject).map(item => item.url);
         }
-        const imagesObject = snapshot.val();
-        const imageUrls = Object.values(imagesObject).map(item => item.url);
         if (imageUrls.length < 2) {
             gridContainer.innerHTML = '<p class="text-center text-red-500">Se necesitan al menos 2 imágenes diferentes para jugar (mínimo 4 cartas).</p>';
             return;
@@ -1449,10 +1632,17 @@ export function initializeMemoryGame() {
 
     // ⭐️ NUEVO: Pre-llenar nombre si ya jugó antes
     const storedName = localStorage.getItem(`playerName_${EVENT_ID}`);
+    const nameInputContainer = document.getElementById('player-name-input-container');
+    const nameBadge = document.getElementById('player-name-badge');
+    const nameBadgeText = document.getElementById('player-name-badge-text');
+
     if (storedName && nameInput) {
         nameInput.value = storedName;
-        nameInput.disabled = true; // 🔒 Bloquear el input
-        nameInput.style.backgroundColor = "#f0f0f0";
+        if (nameInputContainer) nameInputContainer.classList.add('hidden');
+        if (nameBadge) nameBadge.classList.remove('hidden');
+        if (nameBadgeText) nameBadgeText.textContent = storedName;
+    } else {
+        if (nameInput) nameInput.required = true;
     }
 
     async function startMemory() {
@@ -1525,9 +1715,14 @@ function shuffle(array) {
 // =======================================================================
 
 async function startHangmanGame() {
-    const snapshot = await get(hangmanWordsRef);
-    const wordsObject = snapshot.val();
-    const wordList = wordsObject ? Object.values(wordsObject).map(item => item.word) : [];
+    let wordList = [];
+    if (EVENT_ID === 'preview') {
+        wordList = ['CUMPLEAÑOS', 'FIESTA', 'DIGITAL', 'AMIGOS'];
+    } else {
+        const snapshot = await get(hangmanWordsRef);
+        const wordsObject = snapshot.val();
+        wordList = wordsObject ? Object.values(wordsObject).map(item => item.word) : [];
+    }
 
     if (wordList.length === 0) {
         document.getElementById('game-status').textContent = "❌ ERROR: El anfitrión no ha cargado palabras para jugar.";
@@ -1688,10 +1883,17 @@ export function initializeHangmanGame() {
 
     // ⭐️ NUEVO: Pre-llenar nombre en Ahorcado
     const storedName = localStorage.getItem(`playerName_${EVENT_ID}`);
+    const nameInputContainer = document.getElementById('player-name-input-container-hangman');
+    const nameBadge = document.getElementById('player-name-badge-hangman');
+    const nameBadgeText = document.getElementById('player-name-badge-text-hangman');
+
     if (storedName && nameInput) {
         nameInput.value = storedName;
-        nameInput.disabled = true; // 🔒 Bloquear el input
-        nameInput.style.backgroundColor = "#f0f0f0";
+        if (nameInputContainer) nameInputContainer.classList.add('hidden');
+        if (nameBadge) nameBadge.classList.remove('hidden');
+        if (nameBadgeText) nameBadgeText.textContent = storedName;
+    } else {
+        if (nameInput) nameInput.required = true;
     }
 
     async function handleStartGame() {
@@ -1776,6 +1978,17 @@ async function ensureAppInitialized() {
         // ⭐️ SOLUCIÓN FOUC
         const mainContainer = document.querySelector('.quiz-container');
         if (mainContainer) mainContainer.style.opacity = '1';
+
+        // Ocultar y remover spinner de carga
+        const spinner = document.getElementById('loading-spinner');
+        if (spinner) {
+            spinner.style.opacity = '0';
+            setTimeout(() => {
+                spinner.remove();
+                const spinnerStyles = document.getElementById('spinner-styles');
+                if (spinnerStyles) spinnerStyles.remove();
+            }, 300);
+        }
     })();
     return initializationPromise;
 }
@@ -1813,6 +2026,14 @@ function handleHostAuth() {
     const panelContainer = document.getElementById('host-panel-container');
     const loginForm = document.getElementById('host-login-form');
     const loginError = document.getElementById('host-login-error');
+
+    // En modo vista previa, mostrar el panel de anfitrión directamente
+    if (EVENT_ID === 'preview') {
+        if (loginContainer) loginContainer.style.display = 'none';
+        if (panelContainer) panelContainer.style.display = 'block';
+        initializeHost();
+        return;
+    }
 
     // Mostramos el login por defecto
     loginContainer.style.display = 'block';
@@ -1969,6 +2190,44 @@ async function embedFontsInCSS(cssText) {
     resolvedFonts.forEach(font => font && (cssText = cssText.replace(font.originalUrl, font.dataUrl)));
     return cssText;
 }
+
+// ⭐️ HELPERS DEL OVERLAY DE EXPORTACIÓN
+function showExportOverlay(title) {
+    const overlay = document.getElementById('export-progress-overlay');
+    if (!overlay) return;
+    document.getElementById('export-progress-title').textContent = title || 'Generando archivo...';
+    document.getElementById('export-progress-step').textContent = 'Iniciando...';
+    document.getElementById('export-progress-bar-fill').style.width = '0%';
+    document.getElementById('export-progress-pct').textContent = '0%';
+    overlay.classList.add('active');
+}
+function updateExportProgress(step, pct) {
+    const s = document.getElementById('export-progress-step');
+    const b = document.getElementById('export-progress-bar-fill');
+    const p = document.getElementById('export-progress-pct');
+    if (s) s.textContent = step;
+    if (b) b.style.width = pct + '%';
+    if (p) p.textContent = Math.round(pct) + '%';
+}
+function hideExportOverlay(success) {
+    const overlay = document.getElementById('export-progress-overlay');
+    if (!overlay) return;
+    const spinner = document.getElementById('export-progress-spinner');
+    const title = document.getElementById('export-progress-title');
+    if (success) {
+        if (spinner) spinner.style.borderTopColor = '#22c55e';
+        if (title) { title.textContent = '✅ ¡Listo!'; title.style.color = '#16a34a'; }
+        updateExportProgress('Archivo generado con éxito.', 100);
+        setTimeout(() => {
+            overlay.classList.remove('active');
+            if (spinner) spinner.style.borderTopColor = '#FACC15';
+            if (title) { title.style.color = '#1F2937'; }
+        }, 1800);
+    } else {
+        overlay.classList.remove('active');
+    }
+}
+
 /**
  * Función principal para exportar los recuerdos de un evento a un archivo HTML estático.
  * @param {string} eventId - El ID del evento a exportar.
@@ -1987,7 +2246,9 @@ async function exportMemoriesToHTML(eventId) {
 
     const originalButtonText = exportButton.innerHTML;
     exportButton.disabled = true;
-    exportButton.innerHTML = 'Exportando... (puede tardar varios minutos)';
+    exportButton.innerHTML = '⏳ Exportando...';
+    showExportOverlay('📄 Generando HTML...');
+    updateExportProgress('Cargando datos del evento...', 5);
 
     try {
         // 1. Obtener la configuración del evento y todos los recuerdos
@@ -1999,10 +2260,12 @@ async function exportMemoriesToHTML(eventId) {
         let styleSheetText = await styleSheetResponse.text();
 
         // ⭐️ NUEVO: Incrustar las fuentes personalizadas en el CSS
+        updateExportProgress('Procesando estilos y fuentes...', 12);
         styleSheetText = await embedFontsInCSS(styleSheetText);
         const [configSnapshot, memoriesSnapshot] = await Promise.all([get(configRef), get(memoriesRef)]);
 
         if (!memoriesSnapshot.exists()) {
+            hideExportOverlay(false);
             alert("No hay recuerdos para exportar en este evento.");
             return;
         }
@@ -2013,12 +2276,15 @@ async function exportMemoriesToHTML(eventId) {
         // 2. Procesar recuerdos y convertir medios a Base64
         let memoriesHtmlContent = '';
         const memoriesArray = Object.values(memoriesData).sort((a, b) => b.timestamp - a.timestamp);
+        const totalMems = memoriesArray.length;
 
-        for (const memory of memoriesArray) {
+        for (const [memIdx, memory] of memoriesArray.entries()) {
             let mediaContent = '';
             // ⭐️ SOLUCIÓN: Usar consistentemente 'fileUrl' y 'fileType', que es como portalScript.js lo guarda.
             const url = memory.fileUrl;
             const type = memory.fileType;
+
+            updateExportProgress(`Procesando recuerdo ${memIdx + 1} de ${totalMems}...`, 15 + ((memIdx / totalMems) * 72));
 
             if (url) {
                 // Convertir la URL del archivo a Data URL (Base64)
@@ -2065,16 +2331,19 @@ async function exportMemoriesToHTML(eventId) {
 
             const formattedDate = new Date(memory.timestamp).toLocaleString('es-ES');
 
+            const randomRotation = (Math.random() * 6 - 3).toFixed(2);
             memoriesHtmlContent += `
-                <div class="memory-item">
-                    <p style="font-weight: bold; color: #111;">${memory.name}</p>
-                    <p style="font-size: 0.9em; color: #444; margin-top: 4px;">${memory.message || ''}</p>
-                    ${mediaContent}
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.8em; color: #666;">
-                        ${reactionsHtml}
-                        <span>${formattedDate}</span>
+                <div style="width: 100%; display: inline-block; break-inside: avoid; margin-bottom: 15px;">
+                    <div class="memory-item" style="transform: rotate(${randomRotation}deg); transition: transform 0.3s ease; background-color: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        <p style="font-weight: bold; color: #111; font-size: 1.1em; margin-bottom: 4px;">${memory.name}</p>
+                        <p style="font-size: 0.95em; color: #444; margin-bottom: 8px;">${memory.message || ''}</p>
+                        ${mediaContent}
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.8em; color: #666;">
+                            ${reactionsHtml}
+                            <span>${formattedDate}</span>
+                        </div>
+                        ${commentsHtml}
                     </div>
-                    ${commentsHtml}
                 </div>
             `;
         }
@@ -2086,18 +2355,21 @@ async function exportMemoriesToHTML(eventId) {
             :root {
                 ${Object.entries(theme).map(([key, value]) => value && typeof value !== 'object' ? `--${key.replace(/_/g, '-')}: ${value};` : '').join('\n')}
             }
+            ${theme.text_stroke_width && theme.text_stroke_color ? `
+                h1, h2, h3, p, span, button, a, div {
+                    -webkit-text-stroke-width: ${theme.text_stroke_width};
+                    -webkit-text-stroke-color: ${theme.text_stroke_color};
+                }
+            ` : ''}
         `;
 
-        // ⭐️ CORRECCIÓN: Generar HTML solo para los primeros dos stickers del portal
+        // ⭐️ Generar HTML para los stickers del portal con opacidad
         let stickersHtml = '';
         if (theme.portal_stickers && Array.isArray(theme.portal_stickers)) {
-            // Tomamos solo los primeros 2 stickers del portal
             const stickersToExport = theme.portal_stickers.slice(0, 2);
-
             stickersToExport.forEach(sticker => {
                 if (!sticker || !sticker.url) return;
 
-                // Construimos el tag <img> con los estilos en línea
                 stickersHtml += `
                     <img src="${sticker.url}" alt="Sticker Decorativo" style="
                         position: fixed;
@@ -2109,11 +2381,45 @@ async function exportMemoriesToHTML(eventId) {
                         ${sticker.bottom ? `bottom: ${sticker.bottom};` : ''}
                         ${sticker.left ? `left: ${sticker.left};` : ''}
                         ${sticker.right ? `right: ${sticker.right};` : ''}
+                        ${sticker.opacity !== undefined ? `opacity: ${sticker.opacity};` : ''}
                     ">`;
             });
         }
 
-        // ⭐️ INICIO DE LA SOLUCIÓN MEJORADA: Generar un script de personalización completo ⭐️
+        // ⭐️ Script para partículas flotantes
+        let particlesScript = '';
+        if (theme.show_particles !== false) {
+            const particleIcon = theme.icons && theme.icons.icon_particles ? theme.icons.icon_particles : '🐝';
+            particlesScript = `
+                <script>
+                    document.addEventListener('DOMContentLoaded', () => {
+                        setInterval(() => {
+                            const particle = document.createElement('div');
+                            particle.innerHTML = "${particleIcon}";
+                            particle.style.position = 'fixed';
+                            particle.style.bottom = '-50px';
+                            particle.style.left = (Math.random() * 100) + 'vw';
+                            particle.style.fontSize = (Math.random() * 20 + 20) + 'px';
+                            particle.style.opacity = (Math.random() * 0.4 + 0.1).toFixed(2);
+                            particle.style.pointerEvents = 'none';
+                            particle.style.zIndex = '99999';
+                            particle.style.transition = 'transform 8s linear, opacity 8s linear';
+                            document.body.appendChild(particle);
+
+                            setTimeout(() => {
+                                particle.style.transform = \`translateY(-110vh) rotate(\${Math.random() * 360}deg)\`;
+                            }, 50);
+
+                            setTimeout(() => {
+                                particle.remove();
+                            }, 8500);
+                        }, 2000);
+                    });
+                </script>
+            `;
+        }
+
+        // ⭐️ Script de personalización dinámico de textos
         let dynamicApplicationScript = `
             document.addEventListener('DOMContentLoaded', () => {
                 const applyStyle = (elementId, styles) => {
@@ -2130,17 +2436,6 @@ async function exportMemoriesToHTML(eventId) {
                     }
                 };
 
-                // Asignar IDs a los elementos del HTML exportado para que el script los encuentre
-                const h1 = document.querySelector('.container h1');
-                if(h1) h1.id = 'portal-title-text';
-                
-                const greeting = document.querySelector('.container p.greeting');
-                if(greeting) greeting.id = 'portal-greeting-text';
-
-                const subtitle = document.querySelector('.container p.subtitle');
-                if(subtitle) subtitle.id = 'portal-subtitle-text';
-
-                // Aplicar todos los estilos de texto configurados
                 applyStyle('portal-greeting-text', {
                     text: "${texts.portal_greeting || ''}",
                     fontFamily: "${texts.portal_greeting_font_family || ''}",
@@ -2152,7 +2447,7 @@ async function exportMemoriesToHTML(eventId) {
                 });
 
                 applyStyle('portal-title-text', {
-                    text: "${texts.portal_title || ''}",
+                    text: "${texts.portal_title || 'Portal de Recuerdos'}",
                     fontFamily: "${texts.portal_title_font_family || ''}",
                     letterSpacing: "${texts.portal_title_letter_spacing || ''}",
                     fontSize: "${theme.portal_title_font_size || ''}",
@@ -2170,10 +2465,26 @@ async function exportMemoriesToHTML(eventId) {
                     strokeWidth: "${texts.portal_subtitle_stroke_width || ''}",
                     strokeColor: "${texts.portal_subtitle_stroke_color || ''}"
                 });
+
+                applyStyle('memories-section-title-label', {
+                    text: "${texts.text_memories_section_title || 'Deja tu Recuerdo'}",
+                    fontFamily: "${texts.text_memories_section_title_font_family || ''}",
+                    letterSpacing: "${texts.text_memories_section_title_letter_spacing || ''}",
+                    color: "${texts.text_memories_section_title_color || ''}",
+                    strokeWidth: "${texts.text_memories_section_title_stroke_width || ''}",
+                    strokeColor: "${texts.text_memories_section_title_stroke_color || ''}"
+                });
+
+                applyStyle('memories-list-title-text', {
+                    text: "${texts.text_memories_list_title || 'Recuerdos de la Colmena'}",
+                    fontFamily: "${texts.text_memories_list_title_font_family || ''}",
+                    letterSpacing: "${texts.text_memories_list_title_letter_spacing || ''}",
+                    color: "${texts.text_memories_list_title_color || ''}",
+                    strokeWidth: "${texts.text_memories_list_title_stroke_width || ''}",
+                    strokeColor: "${texts.text_memories_list_title_stroke_color || ''}"
+                });
             });
         `;
-        // ⭐️ FIN DE LA SOLUCIÓN MEJORADA ⭐️
-
 
         const finalHtml = `
             <!DOCTYPE html>
@@ -2182,13 +2493,11 @@ async function exportMemoriesToHTML(eventId) {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Recuerdos de ${eventId}</title>
-                <!-- ⭐️ NUEVO: Enlace a Google Fonts para cargar las fuentes externas -->
                 <link rel="preconnect" href="https://fonts.googleapis.com">
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
                 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bangers&family=Caveat&family=Creepster&family=EB+Garamond&family=Inter&family=Lato&family=Lobster&family=Lora&family=Luckiest+Guy&family=Merriweather&family=Montserrat&family=Nunito&family=Open+Sans&family=Oswald&family=PT+Serif&family=Pacifico&family=Playfair+Display&family=Poppins&family=Press+Start+2P&family=Righteous&family=Roboto&family=Roboto+Mono&family=Special+Elite&display=swap" rel="stylesheet">
                 <style>
                     ${cssVariables}
-                    /* ⭐️ NUEVO: Incrustar el contenido completo de style.css con fuentes */
                     ${styleSheetText}
                     body {
                         font-family: ${theme.font_family || 'sans-serif'};
@@ -2196,18 +2505,54 @@ async function exportMemoriesToHTML(eventId) {
                         color: var(--color-text, #333);
                         margin: 0;
                         padding: 20px;
-                        ${theme.background_image_url ? `background-image: url('${theme.background_image_url}'); background-size: ${theme.background_image_size || 'cover'}; background-position: ${theme.background_image_position || 'center'}; background-attachment: fixed;` : ''}
+                        ${theme.background_image_url ? `
+                            background-image: url('${theme.background_image_url}');
+                            background-size: ${theme.background_image_size || 'cover'} !important;
+                            background-position: ${theme.background_image_position || 'center'} !important;
+                            background-repeat: no-repeat !important;
+                            background-attachment: fixed !important;
+                        ` : `
+                            background-image: linear-gradient(135deg, ${theme.color_primary || '#FACC15'} 0%, ${theme.color_secondary || '#F59E0B'} 100%) !important;
+                            background-size: cover !important;
+                            background-attachment: fixed !important;
+                            background-repeat: no-repeat !important;
+                        `}
                     }
-                    .container { max-width: 800px; margin: auto; background-color: var(--portal-bg, rgba(255, 255, 255, 0.9)); border-radius: var(--portal-border-radius, 15px); padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-                    h1 { color: var(--portal-title-color, #000); text-align: center; }
-                    .memory-item { background-color: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 15px; margin-bottom: 15px; }
+                    .portal-container {
+                        max-width: 800px;
+                        margin: auto;
+                        background-color: var(--portal-bg, rgba(255, 255, 255, 0.9));
+                        border-radius: var(--portal-border-radius, 24px);
+                        padding: 24px;
+                        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+                        position: relative;
+                        z-index: 1;
+                    }
+                    .portal-container h1 {
+                        color: var(--portal-title-color, #1F2937);
+                        font-size: var(--portal-title-font-size, 2.25rem);
+                        text-align: center;
+                    }
+                    .memory-item:hover {
+                        transform: rotate(0deg) scale(1.02) !important;
+                        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15) !important;
+                    }
+                    #memories-list {
+                        column-count: 1;
+                        column-gap: 15px;
+                    }
+                    @media (min-width: 640px) {
+                        #memories-list {
+                            column-count: 2;
+                        }
+                    }
                 </style>
                 <style>
                     /* Estilos para el modal (lightbox) */
                     .modal {
                         display: none;
                         position: fixed;
-                        z-index: 1000;
+                        z-index: 100000;
                         left: 0;
                         top: 0;
                         width: 100%;
@@ -2216,7 +2561,7 @@ async function exportMemoriesToHTML(eventId) {
                         background-color: rgba(0,0,0,0.9);
                         justify-content: center;
                         align-items: center;
-                        flex-direction: column; /* Para apilar imagen y botón */
+                        flex-direction: column;
                     }
                     .modal-content {
                         margin: auto;
@@ -2248,18 +2593,26 @@ async function exportMemoriesToHTML(eventId) {
                 </style>
             </head>
             <body>
-                <!-- ⭐️ NUEVO: Contenedor para los stickers -->
                 ${stickersHtml}
-                <div class="container">
-                    <!-- ⭐️ SOLUCIÓN: Añadir clases para que el script los encuentre -->
-                    <p class="greeting" style="text-align: center; text-transform: uppercase; font-weight: 600; color: #6B7280;"></p>
-                    <h1 style="text-align: center;"></h1>
-                    <p class="subtitle" style="text-align: center; color: #4B5563; margin-top: 0.5rem;"></p>
+
+                <div class="portal-container">
+                    <header style="margin-bottom: 24px; text-align: center;">
+                        <p id="portal-greeting-text" style="text-transform: uppercase; font-weight: 600; color: #6B7280; margin-bottom: 8px;"></p>
+                        <h1 id="portal-title-text">Portal de Recuerdos <span class="icon-main">${theme.icons && theme.icons.icon_main ? theme.icons.icon_main : '🐝'}</span></h1>
+                        <p id="portal-subtitle-text" style="color: #4B5563; margin-top: 8px; font-size: 1.25rem;"></p>
+                    </header>
                     
-                    <!-- ⭐️ MEJORA: Filtro de búsqueda -->
+                    <h2 id="memories-section-title-text" style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span>${theme.icons && theme.icons.icon_memories ? theme.icons.icon_memories : '💖'}</span>
+                        <span id="memories-section-title-label">Recuerdos</span>
+                    </h2>
+
+                    <!-- Filtro de búsqueda -->
                     <div style="margin: 20px 0;">
-                        <input type="text" id="search-filter" placeholder="Buscar por nombre o mensaje..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+                        <input type="text" id="search-filter" placeholder="Buscar por nombre o mensaje..." style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 1rem; outline: none; background: white;">
                     </div>
+
+                    <h3 id="memories-list-title-text" style="font-size: 1.25rem; font-weight: bold; margin-bottom: 16px; color: #374151;">Recuerdos de la Colmena</h3>
 
                     <div id="memories-list" style="margin-top: 20px;">
                         ${memoriesHtmlContent}
@@ -2273,10 +2626,11 @@ async function exportMemoriesToHTML(eventId) {
                     <a id="downloadLink" class="download-btn" href="#" download>Descargar Foto</a>
                 </div>
 
-                <!-- ⭐️ MEJORA: Botón "Volver Arriba" -->
-                <button onclick="window.scrollTo({top: 0, behavior: 'smooth'});" style="position: fixed; bottom: 20px; right: 20px; background-color: #333; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+                <button onclick="window.scrollTo({top: 0, behavior: 'smooth'});" style="position: fixed; bottom: 20px; right: 20px; background-color: #333; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.3); z-index: 9999;">
                     ↑
                 </button>
+
+                ${particlesScript}
 
                 <script>
                     const modal = document.getElementById('imageModal');
@@ -2320,10 +2674,12 @@ async function exportMemoriesToHTML(eventId) {
         link.click();
         document.body.removeChild(link);
 
-        alert("¡Exportación completada! Se ha descargado el archivo HTML con todos los recuerdos.");
+        updateExportProgress('Descargando archivo...', 98);
+        hideExportOverlay(true);
 
     } catch (error) {
         console.error("Error durante la exportación:", error);
+        hideExportOverlay(false);
         alert("Ocurrió un error al exportar los recuerdos. Es posible que un problema de red o de permisos (CORS) lo haya impedido. Revisa la consola para más detalles.");
     } finally {
         exportButton.disabled = false;
@@ -2350,7 +2706,10 @@ export async function initializePage() {
 // =======================================================================
 
 function initFloatingParticles(emoji = '✨') {
-    if (document.getElementById('particles-container')) return;
+    const existing = document.getElementById('particles-container');
+    if (existing) {
+        existing.remove();
+    }
     
     const container = document.createElement('div');
     container.id = 'particles-container';
@@ -2360,7 +2719,7 @@ function initFloatingParticles(emoji = '✨') {
     container.style.width = '100vw';
     container.style.height = '100vh';
     container.style.pointerEvents = 'none';
-    container.style.zIndex = '0';
+    container.style.zIndex = '99999'; /* Float in front of content cards */
     container.style.overflow = 'hidden';
     document.body.appendChild(container);
     
@@ -2406,4 +2765,507 @@ function animateParticle(particle, duration) {
             animateParticle(particle, duration);
         }, 100);
     }, duration * 1000);
+}
+
+/**
+ * ⭐️ NUEVO: Exportar todos los recuerdos como un VIDEO (WEBM / MP4)
+ * Utiliza HTML5 Canvas + MediaRecorder API para generar una película animada en alta resolución.
+ */
+async function exportMemoriesToVideo(eventId) {
+    const videoBtn = document.getElementById('export-memories-video-btn');
+    if (!videoBtn) return;
+
+    const originalBtnText = videoBtn.innerHTML;
+    videoBtn.disabled = true;
+    videoBtn.textContent = '⏳ Cargando datos...';
+
+    try {
+        showExportOverlay('🎬 Generando Video...');
+        updateExportProgress('Cargando datos del evento...', 3);
+
+        // 1. Obtener la configuración del tema y los recuerdos de Firebase
+        const configSnapshot = await get(ref(database, `events/${eventId}/config`));
+        const memoriesSnapshot = await get(ref(database, `events/${eventId}/data/memories`));
+
+        if (!memoriesSnapshot.exists()) {
+            hideExportOverlay(false);
+            alert("No hay recuerdos registrados para generar un video.");
+            return;
+        }
+
+        const config = configSnapshot.val() || {};
+        const theme = config.theme || {};
+        const texts = config.texts || {};
+        const memoriesData = memoriesSnapshot.val();
+        const memoriesArray = Object.values(memoriesData).sort((a, b) => a.timestamp - b.timestamp);
+
+        updateExportProgress('Preparando imágenes y medios...', 6);
+
+        // 2. Precargar imágenes de fondo, stickers e imágenes de los recuerdos (vía Base64 para evitar tainting del Canvas)
+        let bgImg = null;
+        if (theme.background_image_url) {
+            try {
+                const dataUrl = await convertUrlToDataURL(theme.background_image_url);
+                if (dataUrl) {
+                    bgImg = new Image();
+                    bgImg.src = dataUrl;
+                    await new Promise(r => { bgImg.onload = r; bgImg.onerror = r; });
+                }
+            } catch (e) { console.warn("No se pudo cargar imagen de fondo para el video:", e); }
+        }
+
+        // Cargar stickers
+        const loadedStickers = [];
+        if (theme.portal_stickers && Array.isArray(theme.portal_stickers)) {
+            for (const s of theme.portal_stickers.slice(0, 2)) {
+                if (s && s.url) {
+                    try {
+                        const dataUrl = await convertUrlToDataURL(s.url);
+                        if (dataUrl) {
+                            const img = new Image();
+                            img.src = dataUrl;
+                            await new Promise(r => { img.onload = r; img.onerror = r; });
+                            loadedStickers.push({ img, config: s });
+                        }
+                    } catch (e) {}
+                }
+            }
+        }
+
+        // Web Audio Context para mezclar el audio de los recuerdos en video
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = AudioContextClass ? new AudioContextClass() : null;
+        const audioDest = audioCtx ? audioCtx.createMediaStreamDestination() : null;
+
+        // Cargar imágenes y videos de recuerdos
+        const preparedMemories = [];
+        let loadedCount = 0;
+        for (const mem of memoriesArray) {
+            let loadedImg = null;
+            let loadedVideo = null;
+            let videoBlobUrl = null;
+            const isVideo = mem.fileType && mem.fileType.startsWith('video');
+
+            if (mem.fileUrl) {
+                if (isVideo) {
+                    // Para videos: crear un elemento <video> con Blob URL para poder dibujar en Canvas y extraer audio
+                    try {
+                        const response = await fetch(mem.fileUrl);
+                        const blob = await response.blob();
+                        videoBlobUrl = URL.createObjectURL(blob);
+                        loadedVideo = document.createElement('video');
+                        loadedVideo.src = videoBlobUrl;
+                        loadedVideo.playsInline = true;
+                        loadedVideo.crossOrigin = 'anonymous';
+
+                        if (audioCtx && audioDest) {
+                            loadedVideo.muted = false;
+                            loadedVideo.volume = 1.0;
+                            try {
+                                const audioSource = audioCtx.createMediaElementSource(loadedVideo);
+                                audioSource.connect(audioDest);
+                            } catch(e) {
+                                console.warn("No se pudo enlazar audio del video:", e);
+                                loadedVideo.muted = true;
+                            }
+                        } else {
+                            loadedVideo.muted = true;
+                        }
+
+                        // Esperar a que el video tenga metadatos (para saber la duración)
+                        await new Promise(r => {
+                            loadedVideo.onloadedmetadata = r;
+                            loadedVideo.onerror = r;
+                            loadedVideo.load();
+                        });
+                    } catch(e) {
+                        console.warn('No se pudo cargar video:', e);
+                        loadedVideo = null;
+                        if (videoBlobUrl) URL.revokeObjectURL(videoBlobUrl);
+                        videoBlobUrl = null;
+                    }
+                } else {
+                    // Para imágenes: convertir a base64
+                    try {
+                        const dataUrl = await convertUrlToDataURL(mem.fileUrl);
+                        if (dataUrl) {
+                            loadedImg = new Image();
+                            loadedImg.src = dataUrl;
+                            await new Promise(r => { loadedImg.onload = r; loadedImg.onerror = r; });
+                        }
+                    } catch (e) {}
+                }
+            }
+            preparedMemories.push({ ...mem, loadedImg, loadedVideo, videoBlobUrl, isVideo });
+            loadedCount++;
+            const loadPct = 8 + ((loadedCount / memoriesArray.length) * 35);
+            updateExportProgress(`Cargando medios (${loadedCount}/${memoriesArray.length})...`, loadPct);
+        }
+
+        updateExportProgress('Iniciando grabación de video...', 44);
+
+        // 3. Crear Canvas HD en formato vertical 9:16 (720 x 1280 px)
+        const canvas = document.createElement('canvas');
+        canvas.width = 720;
+        canvas.height = 1280;
+        const ctx = canvas.getContext('2d');
+
+        // Configurar MediaRecorder compatible con Chrome, Firefox, Safari y iOS Safari
+        const candidateTypes = [
+            'video/webm;codecs=vp9',
+            'video/webm;codecs=vp8',
+            'video/webm',
+            'video/mp4;codecs=avc1',
+            'video/mp4;codecs=h264',
+            'video/mp4'
+        ];
+        let mimeType = '';
+        if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
+            mimeType = candidateTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
+        }
+        const fileExt = mimeType.includes('mp4') ? 'mp4' : 'webm';
+
+        const canvasStream = canvas.captureStream(30); // 30 FPS
+        const combinedTracks = [
+            ...canvasStream.getVideoTracks(),
+            ...(audioDest && audioDest.stream ? audioDest.stream.getTracks() : [])
+        ];
+        const recordStream = new MediaStream(combinedTracks);
+
+        const recorder = mimeType ? new MediaRecorder(recordStream, { mimeType }) : new MediaRecorder(recordStream);
+        const chunks = [];
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.start();
+
+        const FPS = 30;
+        const SLIDE_DURATION_SEC = 3.5;
+        const FRAMES_PER_SLIDE = Math.round(FPS * SLIDE_DURATION_SEC);
+
+        // Partículas flotantes
+        const particleIcon = theme.icons && theme.icons.icon_particles ? theme.icons.icon_particles : '🐝';
+        const particles = Array.from({ length: 12 }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 20 + 24,
+            speed: Math.random() * 2 + 1.5,
+            opacity: Math.random() * 0.4 + 0.2
+        }));
+
+        // Función auxiliar para dibujar rectángulos redondeados en Canvas
+        function drawRoundedRect(c, x, y, w, h, r) {
+            c.beginPath();
+            c.moveTo(x + r, y);
+            c.arcTo(x + w, y, x + w, y + h, r);
+            c.arcTo(x + w, y + h, x, y + h, r);
+            c.arcTo(x, y + h, x, y, r);
+            c.arcTo(x, y, x + w, y, r);
+            c.closePath();
+        }
+
+        // Renderizar slides en Canvas
+        for (let i = 0; i < preparedMemories.length; i++) {
+            const mem = preparedMemories[i];
+            const tiltAngle = ((i % 2 === 0 ? 1 : -1) * (2 + (i % 3))) * (Math.PI / 180);
+
+            const slidePct = 45 + ((i / preparedMemories.length) * 50);
+            updateExportProgress(
+                `Renderizando recuerdo ${i + 1} de ${preparedMemories.length}...`,
+                slidePct
+            );
+
+            // Determinar duración del slide: para videos, usar la duración real del video (máx 30s)
+            let slideDuration = SLIDE_DURATION_SEC;
+            let framesPerSlide = FRAMES_PER_SLIDE;
+            if (mem.isVideo && mem.loadedVideo && mem.loadedVideo.duration && isFinite(mem.loadedVideo.duration)) {
+                slideDuration = Math.min(mem.loadedVideo.duration + 0.5, 30);
+                framesPerSlide = Math.round(FPS * slideDuration);
+            }
+
+            // Si es video, iniciar la reproducción sincronizada y activar audioContext
+            if (mem.isVideo && mem.loadedVideo) {
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    try { await audioCtx.resume(); } catch(e) {}
+                }
+                mem.loadedVideo.currentTime = 0;
+                await new Promise(r => {
+                    mem.loadedVideo.onseeked = r;
+                    mem.loadedVideo.onerror = r;
+                });
+                try { await mem.loadedVideo.play(); } catch(e) {}
+            }
+
+            for (let frame = 0; frame < framesPerSlide; frame++) {
+                const progress = frame / framesPerSlide;
+                
+                let alpha = 1;
+                if (progress < 0.08) alpha = progress / 0.08;
+                else if (progress > 0.92) alpha = (1 - progress) / 0.08;
+
+                // 1. Limpiar canvas y fondo
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (bgImg) {
+                    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                } else {
+                    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                    grad.addColorStop(0, theme.color_primary || '#FFF8E1');
+                    grad.addColorStop(1, theme.color_secondary || '#FDE68A');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+
+                // 2. Dibujar partículas flotantes (animadas)
+                if (theme.show_particles !== false) {
+                    particles.forEach(p => {
+                        p.y -= p.speed;
+                        if (p.y < -50) { p.y = canvas.height + 50; p.x = Math.random() * canvas.width; }
+                        ctx.save();
+                        ctx.globalAlpha = p.opacity;
+                        ctx.font = `${p.size}px sans-serif`;
+                        ctx.fillText(particleIcon, p.x, p.y);
+                        ctx.restore();
+                    });
+                }
+
+                // 3. Dibujar Stickers si están presentes
+                loadedStickers.forEach(st => {
+                    ctx.save();
+                    if (st.config.opacity !== undefined) ctx.globalAlpha = st.config.opacity;
+                    const sw = parseInt(st.config.width) || 120;
+                    const sh = (st.img.height / st.img.width) * sw;
+                    let sx = st.config.left ? parseInt(st.config.left) : (st.config.right ? canvas.width - parseInt(st.config.right) - sw : 20);
+                    let sy = st.config.top ? parseInt(st.config.top) : (st.config.bottom ? canvas.height - parseInt(st.config.bottom) - sh : 20);
+                    ctx.drawImage(st.img, sx, sy, sw, sh);
+                    ctx.restore();
+                });
+
+                // 4. Dibujar Contenedor Portal (Encabezado)
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                drawRoundedRect(ctx, 40, 40, canvas.width - 80, 110, 20);
+                ctx.fill();
+
+                ctx.fillStyle = theme.portal_title_color || '#1F2937';
+                ctx.font = `bold 32px ${theme.font_family || 'sans-serif'}`;
+                ctx.textAlign = 'center';
+                ctx.fillText(texts.portal_title || 'Portal de Recuerdos 🐝', canvas.width / 2, 90);
+
+                ctx.fillStyle = '#6B7280';
+                ctx.font = `20px ${theme.font_family || 'sans-serif'}`;
+                ctx.fillText(`Recuerdo ${i + 1} de ${preparedMemories.length}`, canvas.width / 2, 125);
+                ctx.restore();
+
+                // 5. Dibujar Tarjeta Polaroid
+                ctx.save();
+                ctx.globalAlpha = alpha;
+
+                const cardW = 600;
+                const cardH = 920;
+                const cardY = 180;
+
+                ctx.translate(canvas.width / 2, cardY + cardH / 2);
+                ctx.rotate(tiltAngle);
+
+                const scale = 0.95 + (progress * 0.05);
+                ctx.scale(scale, scale);
+
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+                ctx.shadowBlur = 25;
+                ctx.shadowOffsetY = 12;
+
+                ctx.fillStyle = '#FFFFFF';
+                drawRoundedRect(ctx, -cardW / 2, -cardH / 2, cardW, cardH, 20);
+                ctx.fill();
+                ctx.shadowColor = 'transparent';
+
+                let contentOffsetY = -cardH / 2 + 30;
+
+                if (mem.loadedImg) {
+                    // — Imágen estática
+                    const imgW = cardW - 60;
+                    const imgH = 520;
+                    ctx.save();
+                    drawRoundedRect(ctx, -cardW / 2 + 30, contentOffsetY, imgW, imgH, 12);
+                    ctx.clip();
+                    
+                    const imgRatio = mem.loadedImg.width / mem.loadedImg.height;
+                    const boxRatio = imgW / imgH;
+                    let renderW, renderH, renderX, renderY;
+                    if (imgRatio > boxRatio) {
+                        renderH = imgH; renderW = imgH * imgRatio;
+                        renderX = -cardW / 2 + 30 - (renderW - imgW) / 2;
+                        renderY = contentOffsetY;
+                    } else {
+                        renderW = imgW; renderH = imgW / imgRatio;
+                        renderX = -cardW / 2 + 30;
+                        renderY = contentOffsetY - (renderH - imgH) / 2;
+                    }
+                    ctx.drawImage(mem.loadedImg, renderX, renderY, renderW, renderH);
+                    ctx.restore();
+                    contentOffsetY += imgH + 30;
+
+                } else if (mem.isVideo && mem.loadedVideo) {
+                    // — Video en reproducción: dibujar el frame actual del <video> en el Canvas
+                    const vW = cardW - 60;
+                    const vH = 520;
+                    ctx.save();
+                    drawRoundedRect(ctx, -cardW / 2 + 30, contentOffsetY, vW, vH, 12);
+                    ctx.clip();
+
+                    const vRatio = mem.loadedVideo.videoWidth / mem.loadedVideo.videoHeight || (16/9);
+                    const boxRatio = vW / vH;
+                    let renderW, renderH, renderX, renderY;
+                    if (vRatio > boxRatio) {
+                        renderH = vH; renderW = vH * vRatio;
+                        renderX = -cardW / 2 + 30 - (renderW - vW) / 2;
+                        renderY = contentOffsetY;
+                    } else {
+                        renderW = vW; renderH = vW / vRatio;
+                        renderX = -cardW / 2 + 30;
+                        renderY = contentOffsetY - (renderH - vH) / 2;
+                    }
+                    try { ctx.drawImage(mem.loadedVideo, renderX, renderY, renderW, renderH); } catch(e) {}
+                    ctx.restore();
+
+                    // Ícono de video superpuesto (indicador)
+                    ctx.save();
+                    ctx.globalAlpha = 0.6;
+                    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                    ctx.beginPath();
+                    ctx.arc(-cardW / 2 + 30 + vW - 36, contentOffsetY + 36, 22, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = '20px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('▶', -cardW / 2 + 30 + vW - 36, contentOffsetY + 43);
+                    ctx.restore();
+
+                    contentOffsetY += vH + 30;
+
+                } else {
+                    // Sin media
+                    contentOffsetY += 80;
+                }
+
+                ctx.fillStyle = '#1F2937';
+                ctx.font = `bold 32px ${theme.font_family || 'sans-serif'}`;
+                ctx.textAlign = 'center';
+                ctx.fillText(mem.name || 'Invitado', 0, contentOffsetY + 30);
+
+                if (mem.message) {
+                    ctx.fillStyle = '#4B5563';
+                    ctx.font = `24px ${theme.font_family || 'sans-serif'}`;
+                    const words = mem.message.split(' ');
+                    let line = '';
+                    let lineY = contentOffsetY + 80;
+                    const maxW = cardW - 80;
+                    for (let w = 0; w < words.length; w++) {
+                        const testLine = line + words[w] + ' ';
+                        const metrics = ctx.measureText(testLine);
+                        if (metrics.width > maxW && w > 0) {
+                            ctx.fillText(line, 0, lineY);
+                            line = words[w] + ' ';
+                            lineY += 34;
+                        } else {
+                            line = testLine;
+                        }
+                    }
+                    ctx.fillText(line, 0, lineY);
+                }
+
+                ctx.fillStyle = '#9CA3AF';
+                ctx.font = '20px sans-serif';
+                const formattedDate = mem.timestamp ? new Date(mem.timestamp).toLocaleDateString('es-ES') : '';
+                ctx.fillText(formattedDate, 0, cardH / 2 - 40);
+
+                ctx.restore();
+
+                await new Promise(r => setTimeout(r, 1000 / FPS));
+            }
+
+            // Limpiar video después de renderizar el slide
+            if (mem.isVideo && mem.loadedVideo) {
+                try { mem.loadedVideo.pause(); } catch(e) {}
+                mem.loadedVideo.src = '';
+            }
+            if (mem.videoBlobUrl) {
+                URL.revokeObjectURL(mem.videoBlobUrl);
+            }
+        }
+
+        // 4. Detener grabación y generar archivo descargable
+        updateExportProgress('Finalizando y descargando video...', 97);
+        recorder.stop();
+
+        await new Promise(resolve => {
+            recorder.onstop = () => {
+                // ⭐️ Usar MIME type 'application/octet-stream' para FORZAR la DESCARGA DIRECTA.
+                // Esto evita que Chrome o Safari intenten NAVEGAR la pestaña actual hacia la URL blob:video
+                // (navegar hacía la pestaña descargaba el contexto y causaba ERR_FILE_NOT_FOUND).
+                const downloadBlob = new Blob(chunks, { type: 'application/octet-stream' });
+
+                if (!downloadBlob || downloadBlob.size === 0) {
+                    console.error("El blob del video generado tiene tamaño 0.");
+                    alert("No se pudo generar el video (el archivo resultante está vacío).");
+                    resolve();
+                    return;
+                }
+
+                const url = URL.createObjectURL(downloadBlob);
+                
+                // Mantener referencias en el objeto window para evitar que el Garbage Collector (GC)
+                // de V8/Chromium libere la memoria RAM del Blob durante la descarga
+                window._lastVideoExportBlob = downloadBlob;
+                window._lastVideoExportUrl = url;
+
+                const filename = `recuerdos-${eventId}.${fileExt}`;
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                a.setAttribute('download', filename);
+                document.body.appendChild(a);
+
+                // Disparar evento de descarga sin causar navegación de pestaña
+                try {
+                    a.click();
+                } catch (e) {
+                    const clickEvt = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+                    a.dispatchEvent(clickEvt);
+                }
+
+                // Eliminar el elemento enlace del DOM tras un retraso
+                setTimeout(() => {
+                    if (a.parentNode) a.parentNode.removeChild(a);
+                }, 3000);
+
+                // Revocar la URL de objeto después de 5 minutos para liberar memoria RAM de forma segura
+                setTimeout(() => {
+                    if (window._lastVideoExportUrl === url) {
+                        URL.revokeObjectURL(url);
+                        window._lastVideoExportUrl = null;
+                        window._lastVideoExportBlob = null;
+                    }
+                }, 300000);
+
+                resolve();
+            };
+        });
+
+        hideExportOverlay(true);
+
+    } catch (error) {
+        console.error("Error al exportar video de recuerdos:", error);
+        hideExportOverlay(false);
+        alert("Ocurrió un error al generar el video de recuerdos: " + error.message);
+    } finally {
+        if (audioCtx) {
+            try { audioCtx.close(); } catch(e) {}
+        }
+        videoBtn.disabled = false;
+        videoBtn.innerHTML = originalBtnText;
+    }
 }

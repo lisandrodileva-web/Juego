@@ -1,0 +1,44 @@
+{
+  "rules": {
+    "vidriera_public": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "events": {
+      "$eventId": {
+        "config": {
+          ".write": "auth != null",
+          "status": {
+            ".read": true
+          }
+        },
+        "players": {
+          "$playerId": {
+            ".read": "auth != null",
+            ".write": true
+          }
+        },
+        "gallery": {
+          ".read": true,
+          ".write": true
+        },
+        "quiz": {
+          ".read": true,
+          ".write": "auth != null"
+        },
+        "hangman": {
+          ".read": true,
+          ".write": "auth != null"
+        },
+        "memory": {
+          ".read": true,
+          ".write": "auth != null"
+        }
+      }
+    },
+    "themeTemplates": {
+      ".read": true,
+      ".write": "auth != null"
+    }
+  }
+}

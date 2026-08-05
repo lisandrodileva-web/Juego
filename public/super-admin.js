@@ -26,6 +26,7 @@ const database = getDatabase(app);
 const storage = getStorage(app);
 const functions = getFunctions(app); // ⭐️ NUEVO: Inicializar Firebase Functions
 const auth = getAuth(app);
+let currentLoadedBgUrl = null;
 
 if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
   try {
@@ -785,14 +786,16 @@ const applyTemplateBtn = document.getElementById('apply-template-btn');
         document.getElementById('btn-host-border-color').value = theme.btn_host_border_color || '#FACC15';
 
         // Rellenar previsualización de imagen
+        currentLoadedBgUrl = theme.background_image_url || null;
+        croppedBgImageBlob = null;
         const preview = document.getElementById('bg-image-preview');
-        if (theme.background_image_url) {
+        if (currentLoadedBgUrl) {
             preview.innerHTML = `
-                <p class="text-xs text-gray-600">Fondo actual:</p>
-                <img src="${theme.background_image_url}" class="w-full h-24 object-cover rounded-lg border border-gray-300">
+                <p class="text-xs text-gray-600 font-semibold">Fondo actual:</p>
+                <img src="${currentLoadedBgUrl}" class="w-full h-24 object-cover rounded-lg border border-gray-300">
             `;
         } else {
-            preview.innerHTML = '';
+            preview.innerHTML = '<p class="text-xs text-gray-400 italic">Sin imagen de fondo.</p>';
         }
 
         // ⭐️ NUEVO: Rellenar ajuste y posición de fondo
@@ -1123,16 +1126,12 @@ const applyTemplateBtn = document.getElementById('apply-template-btn');
                 const downloadURL = await getDownloadURL(uploadTask.ref);
                 
                 fullConfig.theme.background_image_url = downloadURL; 
+                currentLoadedBgUrl = downloadURL;
                 statusMsg.textContent = 'Imagen de fondo recortada subida. Guardando config...';
                 croppedBgImageBlob = null; // Limpiar despues de subir con éxito
             } else {
-                // Si NO hay archivo nuevo, nos aseguramos de mantener la URL existente si no es un blob local.
-                const previewImg = document.getElementById('bg-image-preview').querySelector('img');
-                if (previewImg && previewImg.src && !previewImg.src.startsWith('blob:')) {
-                    fullConfig.theme.background_image_url = previewImg.src;
-                } else {
-                    fullConfig.theme.background_image_url = null; // Si no hay ni preview, la eliminamos.
-                }
+                // Preservar siempre la URL de la imagen de fondo previa si no se seleccionó una nueva
+                fullConfig.theme.background_image_url = currentLoadedBgUrl || null;
                 statusMsg.textContent = 'Guardando configuración...';
             }
             

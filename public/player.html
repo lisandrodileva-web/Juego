@@ -3,12 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Juego de trivia interactivo.">
     <title>Trivia <span class="icon-main">🐝</span></title>
-    <!-- ⭐️ CORRECCIÓN: Importación de todas las fuentes para que se vean en móvil ⭐️ -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bangers&family=Caveat&family=Creepster&family=EB+Garamond&family=Inter&family=Lato&family=Lobster&family=Lora&family=Luckiest+Guy&family=Merriweather&family=Montserrat&family=Nunito&family=Open+Sans&family=Oswald&family=PT+Serif&family=Pacifico&family=Playfair+Display&family=Poppins&family=Press+Start+2P&family=Righteous&family=Roboto&family=Roboto+Mono&family=Special+Elite&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css"> 
+    <script src="custom-alerts.js?v=1.0"></script>
+    <link rel="stylesheet" href="style.css?v=1.2"> 
+
+    <style>
+        html, body {
+            background-color: #111827 !important;
+            margin: 0;
+            padding: 0;
+        }
+        #global-page-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 99999999;
+            background: #111827;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            opacity: 1;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+        #global-page-loader.loaded {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .global-loader-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(250, 204, 21, 0.15);
+            border: 4px solid rgba(250, 204, 21, 0.3);
+            border-top-color: #FACC15;
+            animation: spinGlobalLoader 0.85s linear infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 0 25px rgba(250, 204, 21, 0.25);
+        }
+        @keyframes spinGlobalLoader {
+            to { transform: rotate(360deg); }
+        }
+        .global-loader-text {
+            color: #F3F4F6;
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: system-ui, -apple-system, sans-serif;
+            letter-spacing: 0.5px;
+        }
+    </style>
 
     <style>
         /* ⭐️ SOLUCIÓN FOUC: Ocultar el contenedor principal hasta que la configuración esté cargada. */
@@ -114,6 +165,11 @@
 </head>
 <body>
 
+    <div id="global-page-loader">
+        <div class="global-loader-circle">🐝</div>
+        <div class="global-loader-text">Cargando experiencia...</div>
+    </div>
+
     <div class="quiz-container player-mode">
         <h1 id="trivia-title-text"><span class="icon-trivia">✍️</span> Trivia del Evento <span class="icon-main">🐝</span></h1>
         
@@ -121,8 +177,13 @@
             <div id="start-screen" class="quiz-section" style="padding: 20px;">
                 <h2 id="trivia-welcome-text" style="color: #333; margin-bottom: 15px;">¡Bienvenido a la Colmena!</h2>
                 <h3 id="trivia-subtitle-text" style="color: #333; margin-bottom: 10px;">¿Cuanto sabes de Amo?</h3>
-<label for="player-name-input" style="display: block; font-weight: bold; margin-bottom: 5px;">Tu Nombre de Jugador:</label>
-                <input type="text" id="player-name-input" class="text-input" required placeholder="Escribe tu nombre" maxlength="20">
+                <div id="player-name-badge" class="name-badge hidden">
+                    🐝 Juegas como: <span id="player-name-badge-text"></span>
+                </div>
+                <div id="player-name-input-container">
+                    <label for="player-name-input" style="display: block; font-weight: bold; margin-bottom: 5px;">Tu Nombre de Jugador:</label>
+                    <input type="text" id="player-name-input" class="text-input" placeholder="Escribe tu nombre" maxlength="20">
+                </div>
 
                 <p id="player-no-questions-msg" style="color: red; font-weight: bold;" class="hidden">El anfitrión debe cargar las preguntas primero.</p>
                 
@@ -130,7 +191,7 @@
                 <button type="submit" id="start-game-btn" class="btn-portal btn-trivia mt-4">INICIAR JUEGO</button>
                 
                 <div style="text-align: center; margin-top: 20px;">
-                    <button type="button" onclick="window.location.href='index.html'" style="background: none; border: none; color: #666; font-size: 0.9em; cursor: pointer;">
+                    <button type="button" onclick="window.navigateToPage('index.html')" style="background: none; border: none; color: #666; font-size: 0.9em; cursor: pointer;">
                         Volver al Portal
                     </button>
                 </div>
@@ -161,6 +222,6 @@
             <button onclick="location.reload()" style="background: #e69900; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 10px;">Jugar de Nuevo</button>
         </div>
     </div>
-    <script type="module" src="script.js?v=1.0"></script>
+    <script type="module" src="script.js?v=1.2"></script>
 </body>
 </html>

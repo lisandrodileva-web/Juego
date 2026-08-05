@@ -1,0 +1,3 @@
+User-agent: *
+Disallow: /super-admin.html
+Disallow: /host.html

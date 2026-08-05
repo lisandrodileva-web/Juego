@@ -3,15 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Portal de recuerdos y juegos interactivos para eventos y fiestas digitales.">
     <title>Portal de Recuerdos 🐝</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- ⭐️ SOLUCIÓN: Importación de la lista COMPLETA de Google Fonts ⭐️ -->
+    <style>
+        html, body {
+            background-color: #111827 !important;
+            margin: 0;
+            padding: 0;
+        }
+        #global-page-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 99999999;
+            background: #111827;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            opacity: 1;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+        #global-page-loader.loaded {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .global-loader-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(250, 204, 21, 0.15);
+            border: 4px solid rgba(250, 204, 21, 0.3);
+            border-top-color: #FACC15;
+            animation: spinGlobalLoader 0.85s linear infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 0 25px rgba(250, 204, 21, 0.25);
+        }
+        @keyframes spinGlobalLoader {
+            to { transform: rotate(360deg); }
+        }
+        .global-loader-text {
+            color: #F3F4F6;
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: system-ui, -apple-system, sans-serif;
+            letter-spacing: 0.5px;
+        }
+    </style>
+    <script src="https://cdn.tailwindcss.com" defer></script>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bangers&family=Caveat&family=Creepster&family=EB+Garamond&family=Inter&family=Lato&family=Lobster&family=Lora&family=Luckiest+Guy&family=Merriweather&family=Montserrat&family=Nunito&family=Open+Sans&family=Oswald&family=PT+Serif&family=Pacifico&family=Playfair+Display&family=Poppins&family=Press+Start+2P&family=Righteous&family=Roboto&family=Roboto+Mono&family=Special+Elite&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="style.css"> 
-    <style>
+    <script src="custom-alerts.js?v=1.0"></script>
+    <link rel="stylesheet" href="style.css?v=1.2"> 
+    <!-- AOS (Animate on Scroll) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js" defer></script>
+    <!-- GSAP (GreenSock Animation Platform) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>    <style>
+        /* ⭐️ SOLUCIÓN FOUC: Ocultar el portal hasta que la configuración esté cargada. */
+        .portal-container {
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+        }
         /* Estilos CSS mínimos para el funcionamiento instantáneo */
         .file-input-wrapper { display: block; width: 100%; margin-bottom: 8px; position: relative; overflow: hidden; }
         .file-input-wrapper input[type=file] { position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; height: 100%; width: 100%; }
@@ -88,13 +151,23 @@
             background-color: var(--btn-portal-bg);
             color: var(--btn-portal-text-color);
             border-radius: var(--btn-portal-border-radius);
-            
-            /* * Asumimos que tu .btn-portal usa un box-shadow de 4px.
-             * Si tu 'style.css' lo define diferente,
-             * deberás ajustar esto o añadir más variables.
-            */
             box-shadow: 0 4px var(--btn-portal-shadow-color);
-            border: 2px solid var(--btn-portal-shadow-color)
+            border: 2px solid var(--btn-portal-shadow-color);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+
+        .btn-portal:hover,
+        .file-input-wrapper:hover .btn-portal {
+            transform: translateY(-2px);
+            box-shadow: 0 6px var(--btn-portal-shadow-color-hover, var(--btn-portal-shadow-color, #FF9800)) !important;
+            filter: brightness(1.08);
+        }
+
+        .btn-portal:active,
+        .file-input-wrapper:active .btn-portal {
+            transform: translateY(2px);
+            box-shadow: 0 2px var(--btn-portal-shadow-color) !important;
         }
 
         /* ⭐️ NUEVO: Estilos para los botones del menú de juegos */
@@ -112,10 +185,10 @@
 </head>
 <body>
 
-    <a href="ranking.html" target="_blank" id="ranking-trophy-btn" title="Ver Rankings"><span class="icon-ranking">🏆</span></a>
+    <a href="ranking.html" target="_blank" id="ranking-trophy-btn" title="Ver Rankings"><span class="icon-ranking text-2xl hover:scale-110 transition-transform inline-block">🏆</span></a>
 
     <div class="portal-container py-6 sm:py-8" style="position: relative; z-index: 1;"> 
-        <header class="mb-6">
+        <header class="mb-6" data-aos="fade-down" data-aos-duration="800">
             <p id="portal-greeting-text" class="text-lg text-gray-500 uppercase font-semibold">¡Bienvenido a la Colmena!</p>
             
             <h1 id="portal-title-text">Portal de Recuerdos <span class="icon-main">🐝</span></h1>
@@ -123,28 +196,28 @@
             <p id="portal-subtitle-text" class="text-gray-600 mt-2 text-xl">Deja un mensaje, una foto o video capturado.</p>
         </header>
 
-        <div style="position: relative;">
+        <div style="position: relative;" data-aos="fade-down" data-aos-duration="900" data-aos-delay="100">
             
-            <button id="menu-juegos-toggle" class="btn-portal btn-messages">
-                <span class="mr-3 text-2xl icon-games">🕹️</span>
+            <button id="menu-juegos-toggle" class="btn-portal btn-messages flex items-center justify-center gap-2">
+                <span class="icon-games text-xl">🕹️</span>
                 MENÚ DE JUEGOS
-                <span class="ml-3 text-xl">▼</span>
+                <i data-lucide="chevron-down" class="h-4 w-4"></i>
             </button>
 
             <div id="juegos-dropdown" class="hidden-dropdown">
                 <h3 class="text-xl font-black text-gray-800 mb-4 text-center">¡A Jugar!</h3>
                 
                 <div class="space-y-3">
-                    <a href="player.html" class="btn-portal btn-trivia juegos-dropdown-item">
-                        <span class="mr-3 text-2xl icon-trivia">✍️</span>
+                    <a href="player.html" class="btn-portal btn-trivia juegos-dropdown-item flex items-center justify-center gap-2">
+                        <span class="icon-trivia text-xl">✍️</span>
                         <span id="juegos-menu-trivia-text">¿Cuanto conoces a Amo?</span>
                     </a>
-                <a href="memory.html" class="btn-portal btn-trivia juegos-dropdown-item">
-                        <span class="mr-3 text-2xl icon-memory">🧠</span>
+                <a href="memory.html" class="btn-portal btn-trivia juegos-dropdown-item flex items-center justify-center gap-2">
+                        <span class="icon-memory text-xl">🧠</span>
                         <span id="juegos-menu-memory-text">Memoria con Amo</span>
                     </a>
-                    <a href="hangman.html" class="btn-portal btn-trivia juegos-dropdown-item">
-                        <span class="mr-3 text-2xl icon-hangman">💀</span>
+                    <a href="hangman.html" class="btn-portal btn-trivia juegos-dropdown-item flex items-center justify-center gap-2">
+                        <span class="icon-hangman text-xl">💀</span>
                         <span id="juegos-menu-hangman-text">Ahorcado</span>
                     </a>
                 </div>
@@ -155,9 +228,9 @@
 
         </div> 
         
-        <section class="py-4 rounded-xl border border-gray-200 memory-section-bg">
+        <section class="py-4 rounded-xl border border-gray-200 memory-section-bg" data-aos="fade-up" data-aos-duration="1000">
             <h2 class="text-xl font-bold mb-4 text-gray-800 flex items-center justify-center space-x-2">
-                <span class="text-2xl icon-memories">💖</span>
+                <span class="icon-memories text-2xl animate-pulse inline-block">💖</span>
                 <span id="memories-section-title-text">Deja tu Recuerdo</span>
             </h2>
 
@@ -169,21 +242,30 @@
                 <div class="flex flex-col space-y-2 w-full"> 
                     
                     <div class="file-input-wrapper w-full">
-                        <label for="guest-file-photo" class="btn-portal btn-messages">
-                            <span class="mr-1">📸</span> Capturar Foto
+                        <label for="guest-file-photo" class="btn-portal btn-messages flex items-center justify-center gap-2">
+                            <i data-lucide="camera" class="h-5 w-5"></i> Capturar Foto
                         </label>
                         <input type="file" id="guest-file-photo" 
                                accept="image/*" 
-                               capture="camera"> 
+                               capture="environment"> 
                     </div>
                     
                     <div class="file-input-wrapper w-full">
-                        <label for="guest-file-video" class="btn-portal btn-messages">
-                            <span class="mr-1">🎥</span> Grabar Video
+                        <label for="guest-file-video" class="btn-portal btn-messages flex items-center justify-center gap-2">
+                            <i data-lucide="video" class="h-5 w-5"></i> Grabar Video
                         </label>
                         <input type="file" id="guest-file-video" 
                                accept="video/*" 
-                               capture="camcorder"> 
+                               capture="environment"> 
+                    </div>
+
+                    <div class="file-input-wrapper w-full">
+                        <label for="guest-file-gallery" class="btn-portal btn-messages flex items-center justify-center gap-2">
+                            <i data-lucide="image" class="h-5 w-5"></i> Elegir de Galería
+                        </label>
+                        <input type="file" id="guest-file-gallery" 
+                               accept="image/*,video/*"
+                               multiple> 
                     </div>
                 </div>
                            
@@ -194,13 +276,13 @@
                     <div id="upload-progress-bar"><div id="upload-progress"></div></div>
                 </div>
 
-                <button type="submit" id="submit-memory-btn" class="btn-portal btn-messages h-12 mt-4">
-                    Enviar Recuerdo <span class="icon-portal">🎁</span>
+                <button type="submit" id="submit-memory-btn" class="btn-portal btn-messages h-12 mt-4 flex items-center justify-center gap-2">
+                    Enviar Recuerdo <span class="icon-portal text-xl">💬</span>
                 </button>
             </form>
 
-            <h3 id="memories-list-title-text" class="text-lg font-bold mb-2 text-gray-700">Recuerdos de la Colmena</h3>
-            <div id="memories-list" class="space-y-4 max-h-[40rem] overflow-y-auto p-2 border border-dashed border-gray-300 rounded-lg bg-white">
+            <h3 id="memories-list-title-text" class="text-lg font-bold mb-2 text-gray-700" data-aos="fade-up" data-aos-duration="800">Recuerdos de la Colmena</h3>
+            <div id="memories-list" class="max-h-[40rem] overflow-y-auto p-2 border border-dashed border-gray-300 rounded-lg bg-white" data-aos="fade-up" data-aos-duration="1000">
                 <p class="text-sm text-gray-500 italic">Cargando mensajes...</p>
             </div>
             
@@ -208,7 +290,7 @@
 
     </div>
 
-    <script type="module" src="portalScript.js?v=1.0"></script>
+    <script type="module" src="portalScript.js?v=1.2"></script>
 
     <!-- ⭐️ NUEVO: Modal para pedir el nombre del invitado ⭐️ -->
     <div id="guest-name-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-[10000]" style="display: none;">

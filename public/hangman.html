@@ -3,13 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Juego del ahorcado interactivo.">
     <title>Juego del Ahorcado <span class="icon-main">🐝</span></title>
-    <!-- ⭐️ CORRECCIÓN: Importación de todas las fuentes para que se vean en móvil ⭐️ -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bangers&family=Caveat&family=Creepster&family=EB+Garamond&family=Inter&family=Lato&family=Lobster&family=Lora&family=Luckiest+Guy&family=Merriweather&family=Montserrat&family=Nunito&family=Open+Sans&family=Oswald&family=PT+Serif&family=Pacifico&family=Playfair+Display&family=Poppins&family=Press+Start+2P&family=Righteous&family=Roboto&family=Roboto+Mono&family=Special+Elite&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css"> 
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        html, body {
+            background-color: #111827 !important;
+            margin: 0;
+            padding: 0;
+        }
+        #global-page-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 99999999;
+            background: #111827;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            opacity: 1;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+        #global-page-loader.loaded {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .global-loader-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(250, 204, 21, 0.15);
+            border: 4px solid rgba(250, 204, 21, 0.3);
+            border-top-color: #FACC15;
+            animation: spinGlobalLoader 0.85s linear infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 0 25px rgba(250, 204, 21, 0.25);
+        }
+        @keyframes spinGlobalLoader {
+            to { transform: rotate(360deg); }
+        }
+        .global-loader-text {
+            color: #F3F4F6;
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: system-ui, -apple-system, sans-serif;
+            letter-spacing: 0.5px;
+        }
+    </style>
+    <script src="custom-alerts.js?v=1.0"></script>
+    <link rel="stylesheet" href="style.css?v=1.2"> 
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
     
     <style>
         /* ⭐️ SOLUCIÓN FOUC: Ocultar el contenedor principal hasta que la configuración esté cargada. */
@@ -124,21 +174,29 @@
 </head>
 <body>
 
+    <div id="global-page-loader">
+        <div class="global-loader-circle">🐝</div>
+        <div class="global-loader-text">Cargando experiencia...</div>
+    </div>
+
     <div class="quiz-container hangman-container hangman-mode">
         
         <div id="start-screen-hangman">
             <h1 id="hangman-title-text" class="title">El Ahorcado <span class="icon-hangman">💀</span></h1>
             <p id="hangman-subtitle-text" class="mb-4">Ingresa tu nombre para comenzar a adivinar la palabra secreta:</p>
             
-            <label for="player-name-input-hangman" style="display: block; font-weight: bold; margin-bottom: 5px;">Tu Nombre de Jugador:</label>
-            
-            <!-- ⭐️ CORRECCIÓN: Se eliminan los estilos en línea para usar solo la clase 'text-input' -->
-            <input type="text" id="player-name-input-hangman" class="text-input" placeholder="Tu Nombre" maxlength="20">
+            <div id="player-name-badge-hangman" class="name-badge hidden">
+                🐝 Juegas como: <span id="player-name-badge-text-hangman"></span>
+            </div>
+            <div id="player-name-input-container-hangman">
+                <label for="player-name-input-hangman" style="display: block; font-weight: bold; margin-bottom: 5px;">Tu Nombre de Jugador:</label>
+                <input type="text" id="player-name-input-hangman" class="text-input" placeholder="Tu Nombre" maxlength="20">
+            </div>
 
             <button id="start-btn-hangman" class="btn-portal btn-trivia mt-4">¡Comenzar!</button>
 
             <div style="text-align: center; margin-top: 20px;">
-                <button onclick="window.location.href='index.html'" style="background: none; border: none; color: #666; font-size: 0.9em; cursor: pointer;">
+                <button onclick="window.navigateToPage('index.html')" style="background: none; border: none; color: #666; font-size: 0.9em; cursor: pointer;">
                     Volver al Portal
                 </button>
             </div>
@@ -180,13 +238,13 @@
                 Jugar de Nuevo
             </button>
             
-            <button onclick="window.location.href='index.html'" class="btn-portal btn-trivia mt-4" style="background: #ccc; box-shadow: 0 4px #999;">
+            <button onclick="window.navigateToPage('index.html')" class="btn-portal btn-trivia mt-4" style="background: #ccc; box-shadow: 0 4px #999;">
                 Volver al Portal
             </button>
             
         </div>
         
     </div>
-    <script type="module" src="script.js?v=1.0"></script>
+    <script type="module" src="script.js?v=1.2"></script>
 </body>
 </html>

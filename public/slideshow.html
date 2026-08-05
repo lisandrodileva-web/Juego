@@ -3,126 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proyector de Recuerdos</title>
-    <style>
-        :root {
-            --background-color: #000;
-            --text-color: #fff;
-            --text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
-        }
+    <title>Proyector de Recuerdos Live 📽️</title>
+    <!-- Tailwind CSS para diseño moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- GSAP para animaciones ultra-fluidas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts (Inter & Caveat) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
 
-        html, body {
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #08080c;
+            color: #fff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
             margin: 0;
             padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            font-family: sans-serif;
         }
 
-        body.live {
-            cursor: none;
+        .font-caveat {
+            font-family: 'Caveat', cursive;
         }
 
-        #start-screen {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            height: 100%;
-            background-color: #111;
-            z-index: 100;
+        /* Capa de fondo del Evento */
+        #event-bg-image {
             position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: 0;
+            pointer-events: none;
+            transition: background-image 1.5s ease-in-out;
         }
 
-        #start-button {
-            padding: 20px 40px;
-            font-size: 2rem;
-            cursor: pointer;
-            border-radius: 15px;
-            border: 2px solid #fff;
-            background-color: #333;
-            color: #fff;
+        /* Overlay oscuro para legibilidad */
+        #bg-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(8, 8, 12, 0.75);
+            z-index: 1;
+            pointer-events: none;
         }
 
-        #slideshow-container {
+        /* Contenedores de Diapositiva */
+        .slide-container {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
-            position: relative;
+            opacity: 0;
+            visibility: hidden;
+            z-index: 10;
         }
 
-        .slide {
+        /* Fondo desenfocado del slide actual (Ambient bleed) */
+        .slide-backdrop {
             position: absolute;
-            width: 100%;
-            height: 100%;
+            top: -5%;
+            left: -5%;
+            width: 110%;
+            height: 110%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            filter: blur(35px) brightness(0.45);
             opacity: 0;
-            transition: opacity 1s ease-in-out;
+            z-index: 11;
+            pointer-events: none;
+            will-change: opacity; /* 🚀 Optimiza renderizado GPU */
+        }
+
+        /* Polaroid Frame Centrado */
+        .polaroid-frame {
+            position: relative;
+            background-color: #ffffff;
+            padding: 1.5rem 1.5rem 5.5rem 1.5rem;
+            box-shadow: 0 35px 80px -20px rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            z-index: 12;
+            max-width: 85vw;
+            max-height: 82vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            will-change: transform, opacity; /* 🚀 Fuerza aceleración por hardware */
+        }
+
+        .polaroid-media {
+            max-width: 100%;
+            max-height: 58vh;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        /* Dedicatoria */
+        .polaroid-caption {
+            position: absolute;
+            bottom: 0.6rem;
+            left: 1.5rem;
+            right: 1.5rem;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 4vw;
-            box-sizing: border-box;
-        }
-
-        .slide.active {
-            opacity: 1;
-        }
-
-        .slide .media {
-            max-width: 100%;
-            max-height: 80vh;
-            object-fit: contain;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            transition: transform 10s ease-in-out;
-            transform: scale(1);
-        }
-
-        .slide.active .media {
-            /* Ken Burns Effect */
-            transform: scale(1.06);
-        }
-
-        .slide .info {
-            position: absolute;
-            bottom: 5vh;
-            left: 5vw;
-            right: 5vw;
             text-align: center;
-            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-            padding: 2vw;
-            border-radius: 0 0 15px 15px;
+            color: #1f2937; /* Gris oscuro marcador */
+            overflow: hidden;
         }
 
-        .slide .info h3 {
-            margin: 0;
-            font-size: 2.5vw;
-            text-shadow: var(--text-shadow);
+        /* Píldoras de Reacciones en Proyección */
+        .reaction-pill {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
         }
 
-        .slide .info p {
-            margin: 0.5vw 0 0;
-            font-size: 1.8vw;
-            text-shadow: var(--text-shadow);
+        /* Tarjeta de Dedicatoria de Solo Texto */
+        .message-card-frame {
+            position: relative;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            padding: 3rem 2.5rem 2.5rem 2.5rem;
+            box-shadow: 0 35px 90px -15px rgba(0, 0, 0, 0.85);
+            border-radius: 16px;
+            z-index: 12;
+            width: 88vw;
+            max-width: 800px;
+            min-height: 360px;
+            max-height: 82vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            will-change: transform, opacity;
+        }
+
+        /* Efecto pulso para el botón EN VIVO */
+        @keyframes pulse-red {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.5; }
+        }
+        .pulse-dot {
+            animation: pulse-red 2s infinite ease-in-out;
         }
     </style>
 </head>
 <body>
 
-    <div id="start-screen">
-        <h1 style="font-size: 3rem;">Modo Proyector</h1>
-        <button id="start-button">📽️ Iniciar</button>
+    <!-- Capa de fondo del evento dinámica -->
+    <div id="event-bg-image"></div>
+    <div id="bg-overlay"></div>
+
+    <!-- 📺 PANTALLA DE INICIO DE PROYECCIÓN -->
+    <div id="start-screen" class="fixed inset-0 flex flex-col justify-center items-center z-[100] bg-slate-950/90 backdrop-blur-md px-6">
+        <div class="bg-white/10 border border-white/20 p-8 sm:p-12 rounded-3xl shadow-2xl text-center max-w-lg w-full backdrop-blur-xl scale-95" data-aos="zoom-in">
+            <div class="w-20 h-20 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-yellow-500/30 animate-bounce">
+                <i data-lucide="projector" class="h-10 w-10 text-slate-950"></i>
+            </div>
+            
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2 text-white">Modo Proyector</h1>
+            <p class="text-slate-300 text-base sm:text-lg mb-8">Visualiza fotos y dedicatorias enviadas por tus invitados en tiempo real.</p>
+            
+            <div class="flex items-center justify-center gap-2 mb-8 bg-slate-900/60 py-2.5 px-4 rounded-full border border-white/5 inline-flex text-sm text-yellow-400">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-md shadow-emerald-500/50 pulse-dot"></span>
+                <span>Conexión Realtime lista</span>
+            </div>
+
+            <button id="start-button" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-[1.03] active:scale-95 text-lg shadow-xl shadow-yellow-500/20 flex items-center justify-center gap-2">
+                <i data-lucide="play" class="h-5 w-5 fill-current"></i>
+                Iniciar Proyección Live
+            </button>
+        </div>
     </div>
 
-    <div id="slideshow-container">
-        <!-- Las diapositivas se insertarán aquí dinámicamente -->
+    <!-- 📊 DASHBOARD SUPERIOR (BARRA EN VIVO) -->
+    <div id="live-dashboard-bar" class="fixed top-0 left-0 right-0 h-16 bg-slate-950/60 border-b border-white/10 backdrop-blur-md z-50 px-6 flex items-center justify-between pointer-events-none opacity-0 transition-opacity duration-1000">
+        <!-- Izquierda: Estatus en vivo -->
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 bg-red-600/90 py-1 px-3 rounded-full text-xs font-black tracking-widest text-white shadow-md shadow-red-600/20">
+                <span class="w-2 h-2 rounded-full bg-white pulse-dot"></span>
+                <span>EN VIVO</span>
+            </div>
+            <span id="projector-event-title" class="font-bold text-sm tracking-wide text-slate-200">Portal de Recuerdos</span>
+        </div>
+
+        <!-- Centro: Reloj Digital -->
+        <div class="flex items-center gap-2 text-lg font-mono font-bold tracking-wider text-slate-100 bg-white/5 py-1 px-4 rounded-xl border border-white/5">
+            <i data-lucide="clock" class="h-4 w-4 text-yellow-400"></i>
+            <span id="live-clock">00:00:00</span>
+        </div>
+
+        <!-- Derecha: Contador de Recuerdos -->
+        <div class="flex items-center gap-2 bg-yellow-500 text-slate-950 py-1 px-3.5 rounded-full text-xs font-extrabold shadow-lg shadow-yellow-500/10">
+            <i data-lucide="images" class="h-3.5 w-3.5"></i>
+            <span id="live-counter">0 recuerdos</span>
+        </div>
+    </div>
+
+    <!-- 🖼️ CONTENEDOR DE DIAPOSITIVAS -->
+    <div id="slideshow-container" class="relative w-full h-full flex justify-center items-center z-10">
+        <!-- Las diapositivas se inyectarán de forma dinámica aquí -->
     </div>
 
     <script type="module">
@@ -149,10 +258,17 @@
             }
         }
 
-        const SLIDE_INTERVAL = 8000; // 8 segundos
+        const SLIDE_INTERVAL = 8500; // 8.5 segundos por defecto para fotos y mensajes
         let memories = [];
         let currentIndex = 0;
-        let slideshowInterval;
+        let slideshowTimer = null;
+        let lastActiveSlide = null;
+        let EVENT_ID = '';
+
+        function scheduleNextSlide(delayMs) {
+            if (slideshowTimer) clearTimeout(slideshowTimer);
+            slideshowTimer = setTimeout(showNextSlide, delayMs);
+        }
 
         function getEventId() {
             const params = new URLSearchParams(window.location.search);
@@ -161,112 +277,387 @@
             return eventId;
         }
 
-        /**
-         * ⭐️ NUEVO: Valida si la funcionalidad del proyector está habilitada.
-         * Si no lo está, lanza un error para detener la ejecución.
-         */
         async function validateFeature(eventId) {
             const featureRef = ref(database, `events/${eventId}/config/features/projector_enabled`);
             const snapshot = await get(featureRef);
-            // Si el flag existe y es `false`, la funcionalidad está deshabilitada.
             if (snapshot.exists() && snapshot.val() === false) {
                 throw new Error('El Modo Proyector está deshabilitado para este evento.');
             }
-            // Si el flag no existe, se asume que está habilitado por defecto.
         }
 
-
-        async function applyTheme(eventId) {
-            const configRef = ref(database, `events/${eventId}/config/theme`);
+        async function applyThemeAndTitle(eventId) {
+            const configRef = ref(database, `events/${eventId}/config`);
             const snapshot = await get(configRef);
             if (snapshot.exists()) {
-                const theme = snapshot.val();
-                if (theme.background_image_url) {
-                    document.body.style.backgroundImage = `url('${theme.background_image_url}')`;
-                    document.body.style.backgroundSize = theme.background_image_size || 'cover';
-                    document.body.style.backgroundPosition = theme.background_image_position || 'center';
-                    document.body.style.backgroundRepeat = 'no-repeat';
+                const config = snapshot.val();
+                
+                // 1. Aplicar título del evento a la barra superior
+                const titleText = config.texts?.portal_title || 'Portal de Recuerdos';
+                const elTitle = document.getElementById('projector-event-title');
+                if (elTitle) elTitle.textContent = titleText;
+
+                // 2. Cargar imagen de fondo del evento centrada
+                const theme = config.theme || {};
+                const elBg = document.getElementById('event-bg-image');
+                if (elBg && theme.background_image_url) {
+                    elBg.style.backgroundImage = `url('${theme.background_image_url}')`;
+                    elBg.style.backgroundSize = 'cover';
+                    elBg.style.backgroundPosition = 'center';
                 }
             }
         }
 
+        const REACTION_EMOJIS = {
+            'like': '👍',
+            'love': '❤️',
+            'haha': '😂',
+            'wow': '😮',
+            'sad': '😢',
+            'angry': '😡'
+        };
+
+        function renderReactionsBar(reactionSummary) {
+            if (!reactionSummary || typeof reactionSummary !== 'object') return '';
+            
+            let pillsHtml = '';
+            for (const type of Object.keys(REACTION_EMOJIS)) {
+                const count = reactionSummary[type];
+                if (count && count > 0) {
+                    pillsHtml += `<span class="reaction-pill">
+                        <span>${REACTION_EMOJIS[type]}</span>
+                        <span>${count}</span>
+                    </span>`;
+                }
+            }
+            
+            if (!pillsHtml) return '';
+            return `<div class="reactions-container flex flex-wrap items-center justify-center gap-2 mt-2">${pillsHtml}</div>`;
+        }
+
+        /**
+         * Transición de diapositivas animada con GSAP
+         */
         function showNextSlide() {
+            if (slideshowTimer) clearTimeout(slideshowTimer);
+
             const container = document.getElementById('slideshow-container');
-            if (memories.length === 0) return;
+            
+            // 💡 Si no hay recuerdos, mostrar slide decorativo interactivo
+            let currentList = memories;
+            if (currentList.length === 0) {
+                currentList = [{
+                    id: 'placeholder',
+                    name: 'La Colmena 🐝',
+                    message: '¡Escanea el QR del evento y envía tu foto, video o mensaje para aparecer aquí en vivo!',
+                    fileUrl: 'https://i.imgur.com/AbCqgSg.jpeg', // Hermosa foto ilustrativa de muestra
+                    fileType: 'image/jpeg'
+                }];
+            }
 
-            // Limpia el slide anterior
-            const currentActive = container.querySelector('.slide.active');
-            if (currentActive) currentActive.classList.remove('active');
-
-            // Prepara el nuevo slide
-            const memory = memories[currentIndex];
+            // Seleccionar recuerdo actual
+            const memory = currentList[currentIndex];
             const slideId = `slide-${memory.id}`;
 
+            // Buscar si ya existe el elemento de diapositiva en el DOM
             let slide = document.getElementById(slideId);
-            if (!slide) {
+            const isNew = !slide;
+            const hasMedia = memory.fileUrl && memory.fileUrl.trim() !== '';
+
+            if (isNew) {
                 slide = document.createElement('div');
                 slide.id = slideId;
-                slide.className = 'slide';
+                slide.className = 'slide-container';
 
-                const isVideo = memory.fileType && memory.fileType.startsWith('video');
-                const mediaElement = isVideo ? document.createElement('video') : document.createElement('img');
-                mediaElement.src = memory.fileUrl;
-                mediaElement.className = 'media';
-                if (isVideo) {
-                    mediaElement.autoplay = true;
-                    mediaElement.muted = true;
-                    mediaElement.loop = true;
-                    mediaElement.playsInline = true;
-                }
-                slide.appendChild(mediaElement);
+                if (hasMedia) {
+                    // 1. Capa de fondo difuminada ambiental
+                    const backdrop = document.createElement('div');
+                    backdrop.className = 'slide-backdrop';
+                    backdrop.style.backgroundImage = `url('${memory.fileUrl}')`;
+                    slide.appendChild(backdrop);
 
-                if (memory.name || memory.message) {
-                    const infoDiv = document.createElement('div');
-                    infoDiv.className = 'info';
-                    infoDiv.innerHTML = `<h3>${memory.name || ''}</h3><p>${memory.message || ''}</p>`;
-                    slide.appendChild(infoDiv);
+                    // 2. Estructura Polaroid para fotos/videos
+                    const polaroid = document.createElement('div');
+                    polaroid.className = 'polaroid-frame';
+
+                    const isVideo = memory.fileType && memory.fileType.startsWith('video');
+                    const mediaElement = isVideo ? document.createElement('video') : document.createElement('img');
+                    mediaElement.src = memory.fileUrl;
+                    mediaElement.className = 'polaroid-media';
+                    if (isVideo) {
+                        mediaElement.autoplay = true;
+                        mediaElement.muted = true;
+                        mediaElement.loop = false;
+                        mediaElement.playsInline = true;
+                    }
+                    polaroid.appendChild(mediaElement);
+
+                    // Dedicatoria / Firma de Polaroid
+                    const caption = document.createElement('div');
+                    caption.className = 'polaroid-caption';
+                    polaroid.appendChild(caption);
+
+                    slide.appendChild(polaroid);
+                } else {
+                    // Capa de fondo sutil para tarjeta de mensaje de texto
+                    const backdrop = document.createElement('div');
+                    backdrop.className = 'slide-backdrop message-backdrop';
+                    slide.appendChild(backdrop);
+
+                    // Tarjeta estilizada para mensaje de texto de invitado
+                    const messageCard = document.createElement('div');
+                    messageCard.className = 'message-card-frame';
+
+                    const quoteIcon = document.createElement('div');
+                    quoteIcon.className = 'text-yellow-500/80 text-6xl font-serif select-none mb-1';
+                    quoteIcon.innerHTML = '“';
+                    messageCard.appendChild(quoteIcon);
+
+                    const msgP = document.createElement('p');
+                    msgP.className = 'slide-message-text font-caveat text-3xl sm:text-4xl lg:text-5xl font-bold leading-relaxed text-slate-800 my-auto max-w-full px-4 overflow-hidden';
+                    messageCard.appendChild(msgP);
+
+                    const footerDiv = document.createElement('div');
+                    footerDiv.className = 'slide-message-footer w-full flex flex-col items-center gap-2 mt-4';
+                    messageCard.appendChild(footerDiv);
+
+                    slide.appendChild(messageCard);
                 }
+
                 container.appendChild(slide);
             }
 
-            // Muestra el nuevo slide
-            setTimeout(() => slide.classList.add('active'), 100);
+            // ⭐️ ACTUALIZAR CONTENIDOS Y REACCIONES REALES EN TIEMPO REAL ⭐️
+            if (hasMedia) {
+                const captionEl = slide.querySelector('.polaroid-caption');
+                if (captionEl) {
+                    let captionContent = '';
+                    if (memory.name) {
+                        captionContent += `<h3 class="font-bold text-slate-800 text-sm sm:text-base tracking-wide truncate max-w-full">✍️ ${memory.name}</h3>`;
+                    }
+                    if (memory.message) {
+                        captionContent += `<p class="font-caveat text-2xl sm:text-3xl font-bold leading-tight mt-0.5 text-slate-700 max-w-full truncate">${memory.message}</p>`;
+                    }
+                    captionContent += renderReactionsBar(memory.reactionSummary);
+                    captionEl.innerHTML = captionContent;
+                }
+            } else {
+                const msgP = slide.querySelector('.slide-message-text');
+                if (msgP) {
+                    msgP.textContent = memory.message || '';
+                }
+                const footerDiv = slide.querySelector('.slide-message-footer');
+                if (footerDiv) {
+                    let footerContent = '';
+                    if (memory.name) {
+                        footerContent += `<h3 class="font-bold text-slate-900 text-lg sm:text-xl tracking-wide">✍️ ${memory.name}</h3>`;
+                    }
+                    footerContent += renderReactionsBar(memory.reactionSummary);
+                    footerDiv.innerHTML = footerContent;
+                }
+            }
 
-            currentIndex = (currentIndex + 1) % memories.length;
+            // Elevar z-index de la diapositiva entrante para que siempre cruce por encima
+            gsap.set(slide, { zIndex: 20 });
+
+            // Animación de salida para la diapositiva anterior
+            if (lastActiveSlide && lastActiveSlide !== slide) {
+                const oldSlide = lastActiveSlide;
+                gsap.set(oldSlide, { zIndex: 10 });
+                gsap.to(oldSlide, {
+                    opacity: 0,
+                    duration: 1.0,
+                    ease: 'power2.inOut',
+                    onComplete: () => {
+                        oldSlide.style.visibility = 'hidden';
+                    }
+                });
+            }
+
+            // Animación de entrada para la nueva diapositiva con GSAP
+            slide.style.visibility = 'visible';
+            const backdropEl = slide.querySelector('.slide-backdrop');
+            const mainFrameEl = slide.querySelector('.polaroid-frame') || slide.querySelector('.message-card-frame');
+            const captionEl = slide.querySelector('.polaroid-caption') || slide.querySelector('.slide-message-footer');
+            const mediaEl = slide.querySelector('.polaroid-media');
+
+            // Resetear estados iniciales
+            gsap.set(slide, { opacity: 0 });
+            gsap.set(backdropEl, { opacity: 0 });
+            if (mainFrameEl) {
+                gsap.set(mainFrameEl, { 
+                    scale: 0.93, 
+                    rotation: Math.random() * 6 - 3,
+                    y: 35,
+                    opacity: 0 
+                });
+            }
+            if (captionEl) gsap.set(captionEl, { opacity: 0, y: 12 });
+
+            // Línea de tiempo de animación de entrada
+            const tl = gsap.timeline();
+            tl.to(slide, { opacity: 1, duration: 0.8, ease: 'power2.out' })
+              .to(backdropEl, { opacity: 0.75, duration: 1.0, ease: 'power1.out' }, 0);
+            
+            if (mainFrameEl) {
+                tl.to(mainFrameEl, { 
+                    opacity: 1, 
+                    scale: 1, 
+                    y: 0, 
+                    rotation: Math.random() * 4 - 2,
+                    duration: 1.1, 
+                    ease: 'power2.out'
+                }, 0.1);
+            }
+
+            if (captionEl) {
+                tl.to(captionEl, { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out' }, 0.5);
+            }
+
+            lastActiveSlide = slide;
+            
+            // Incrementar índice de diapositiva
+            if (currentList.length > 0) {
+                currentIndex = (currentIndex + 1) % currentList.length;
+            }
+
+            // ⏱️ Lógica de temporización dinámica (Duración real del video vs Foto/Texto)
+            const isVideo = mediaEl && mediaEl.tagName === 'VIDEO';
+
+            if (isVideo) {
+                mediaEl.loop = false;
+                mediaEl.currentTime = 0;
+                const playPromise = mediaEl.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => console.warn("Autoplay o carga de video:", err));
+                }
+
+                let advanced = false;
+                const advanceNext = () => {
+                    if (!advanced) {
+                        advanced = true;
+                        mediaEl.onended = null;
+                        mediaEl.onerror = null;
+                        showNextSlide();
+                    }
+                };
+
+                mediaEl.onended = advanceNext;
+                mediaEl.onerror = advanceNext;
+
+                if (!isNaN(mediaEl.duration) && mediaEl.duration > 0) {
+                    const videoDurationMs = Math.max(mediaEl.duration * 1000 + 400, 3000);
+                    scheduleNextSlide(videoDurationMs);
+                } else {
+                    mediaEl.onloadedmetadata = () => {
+                        if (!advanced) {
+                            const videoDurationMs = Math.max(mediaEl.duration * 1000 + 400, 3000);
+                            scheduleNextSlide(videoDurationMs);
+                        }
+                    };
+                    scheduleNextSlide(15000); // Fallback por defecto si aún no carga metadatos
+                }
+            } else {
+                // Efecto Ken Burns en fotos
+                if (mediaEl) {
+                    gsap.fromTo(mediaEl, 
+                        { scale: 1 }, 
+                        { scale: 1.03, duration: SLIDE_INTERVAL / 1000, ease: 'sine.inOut', yoyo: true, repeat: 1 }
+                    );
+                }
+                scheduleNextSlide(SLIDE_INTERVAL);
+            }
+        }
+
+        // Reloj digital en tiempo real
+        function startLiveClock() {
+            const clockEl = document.getElementById('live-clock');
+            if (!clockEl) return;
+            
+            setInterval(() => {
+                const now = new Date();
+                const hh = String(now.getHours()).padStart(2, '0');
+                const mm = String(now.getMinutes()).padStart(2, '0');
+                const ss = String(now.getSeconds()).padStart(2, '0');
+                clockEl.textContent = `${hh}:${mm}:${ss}`;
+            }, 1000);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Inicializar iconos de Lucide
+            lucide.createIcons();
+
             const startButton = document.getElementById('start-button');
             const startScreen = document.getElementById('start-screen');
+            const dashboardBar = document.getElementById('live-dashboard-bar');
 
             startButton.addEventListener('click', async () => {
                 try {
-                    const eventId = getEventId();
-                    await validateFeature(eventId); // ⭐️ NUEVO: Validar antes de continuar
-                    await applyTheme(eventId);
+                    EVENT_ID = getEventId();
+                    
+                    // 1. Validar e iniciar temas
+                    await validateFeature(EVENT_ID);
+                    await applyThemeAndTitle(EVENT_ID);
+                    startLiveClock();
 
-                    const memoriesRef = ref(database, `events/${eventId}/data/memories`);
+                    // 2. Escuchar la base de datos de recuerdos en tiempo real
+                    const memoriesRef = ref(database, `events/${EVENT_ID}/data/memories`);
                     onValue(memoriesRef, (snapshot) => {
-                        if (!snapshot.exists()) return;
-                        const data = snapshot.val();
-                        memories = Object.keys(data)
-                            .map(key => ({ id: key, ...data[key] }))
-                            .filter(m => m.fileUrl) // Solo mostrar recuerdos con foto o video
-                            .sort((a, b) => a.timestamp - b.timestamp); // Ordenar por más antiguo primero
+                        let count = 0;
+                        if (snapshot.exists()) {
+                            const data = snapshot.val();
+                            memories = Object.keys(data)
+                                .map(key => ({ id: key, ...data[key] }))
+                                .filter(m => (m.fileUrl && m.fileUrl.trim() !== '') || (m.message && m.message.trim() !== ''))
+                                .sort((a, b) => a.timestamp - b.timestamp);
+                            count = memories.length;
+                        } else {
+                            memories = [];
+                        }
 
-                        if (!slideshowInterval && memories.length > 0) {
-                            showNextSlide(); // Mostrar el primero inmediatamente
-                            slideshowInterval = setInterval(showNextSlide, SLIDE_INTERVAL);
+                        // Actualizar contador en barra de herramientas superior
+                        const counterEl = document.getElementById('live-counter');
+                        if (counterEl) {
+                            counterEl.textContent = `${count} recuerdo${count !== 1 ? 's' : ''}`;
+                        }
+
+                        // Iniciar reproducción si es la primera carga
+                        if (!slideshowTimer && memories.length > 0) {
+                            showNextSlide();
                         }
                     });
 
-                    // Entrar en modo fullscreen y ocultar pantalla de inicio
-                    document.documentElement.requestFullscreen();
-                    document.body.classList.add('live');
+                    // Si no hay recuerdos iniciales, forzar la reproducción para mostrar el placeholder
+                    setTimeout(() => {
+                        if (!slideshowTimer) {
+                            showNextSlide();
+                        }
+                    }, 1000);
+
+                    // 3. Activar pantalla completa
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(err => {
+                            console.warn("Fullscreen request blocked or failed:", err);
+                        });
+                    }
+                    
+                    // 4. Mostrar Dashboard y ocultar pantalla de inicio
                     startScreen.style.display = 'none';
+                    if (dashboardBar) {
+                        dashboardBar.classList.remove('opacity-0');
+                    }
+                    document.body.classList.add('live');
 
                 } catch (error) {
-                    document.body.innerHTML = `<h1 style="color: red; text-align: center; padding: 50px;">${error.message}</h1>`;
+                    document.body.innerHTML = `
+                        <div class="flex flex-col justify-center items-center w-full h-full bg-slate-950 p-8 text-center">
+                            <div class="bg-red-500/10 border border-red-500/20 p-8 rounded-2xl max-w-md">
+                                <i data-lucide="alert-circle" class="h-12 w-12 text-red-500 mx-auto mb-4 animate-pulse"></i>
+                                <h1 class="text-xl font-bold text-red-500 mb-2">Error de Configuración</h1>
+                                <p class="text-slate-300 text-sm">${error.message}</p>
+                            </div>
+                        </div>
+                    `;
+                    lucide.createIcons();
                 }
             });
         });
