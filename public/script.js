@@ -3054,6 +3054,11 @@ async function exportMemoriesToVideo(eventId) {
 
         // Renderizar slides en Canvas
         for (let i = 0; i < preparedMemories.length; i++) {
+            // Pausar la grabación mientras se prepara el siguiente slide (evita trabas/fotogramas congelados en la transición)
+            if (recorder && recorder.state === 'recording') {
+                try { recorder.pause(); } catch(e) {}
+            }
+
             const mem = preparedMemories[i];
             const tiltAngle = ((i % 2 === 0 ? 1 : -1) * (2 + (i % 3))) * (Math.PI / 180);
 
@@ -3082,6 +3087,11 @@ async function exportMemoriesToVideo(eventId) {
                     mem.loadedVideo.onerror = r;
                 });
                 try { await mem.loadedVideo.play(); } catch(e) {}
+            }
+
+            // Reanudar la grabación justo antes de comenzar a dibujar los frames de esta diapositiva
+            if (recorder && recorder.state === 'paused') {
+                try { recorder.resume(); } catch(e) {}
             }
 
             for (let frame = 0; frame < framesPerSlide; frame++) {
@@ -3148,7 +3158,7 @@ async function exportMemoriesToVideo(eventId) {
                 ctx.fillText(`Recuerdo ${i + 1} de ${preparedMemories.length}`, canvas.width / 2, 125);
                 ctx.restore();
 
-                // 5. Dibujar Tarjeta Polaroid
+                // 5. Dibujar Tarjeta Polaroid con movimiento dinámico estilo Ken Burns
                 ctx.save();
                 ctx.globalAlpha = alpha;
 
@@ -3159,7 +3169,8 @@ async function exportMemoriesToVideo(eventId) {
                 ctx.translate(canvas.width / 2, cardY + cardH / 2);
                 ctx.rotate(tiltAngle);
 
-                const scale = 0.95 + (progress * 0.05);
+                // Movimiento dinámico suave (Ken Burns)
+                const scale = 0.95 + (Math.sin(progress * Math.PI) * 0.05);
                 ctx.scale(scale, scale);
 
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
@@ -3198,6 +3209,14 @@ async function exportMemoriesToVideo(eventId) {
                     contentOffsetY += imgH + 30;
 
                 } else if (mem.isVideo && mem.loadedVideo) {
+                    // Sincronizar tiempo de video si es necesario para evitar desajustes
+                    if (mem.loadedVideo.duration && isFinite(mem.loadedVideo.duration)) {
+                        const targetTime = Math.min((frame / framesPerSlide) * mem.loadedVideo.duration, mem.loadedVideo.duration - 0.05);
+                        if (Math.abs(mem.loadedVideo.currentTime - targetTime) > 0.2) {
+                            try { mem.loadedVideo.currentTime = targetTime; } catch(e) {}
+                        }
+                    }
+
                     // — Video en reproducción: dibujar el frame actual del <video> en el Canvas
                     const vW = cardW - 60;
                     const vH = 520;
@@ -3276,6 +3295,11 @@ async function exportMemoriesToVideo(eventId) {
                 await new Promise(r => setTimeout(r, 1000 / FPS));
             }
 
+            // Pausar el grabador al terminar el slide para que no se graben los milisegundos de limpieza
+            if (recorder && recorder.state === 'recording') {
+                try { recorder.pause(); } catch(e) {}
+            }
+
             // Limpiar video después de renderizar el slide
             if (mem.isVideo && mem.loadedVideo) {
                 try { mem.loadedVideo.pause(); } catch(e) {}
@@ -3284,6 +3308,11 @@ async function exportMemoriesToVideo(eventId) {
             if (mem.videoBlobUrl) {
                 URL.revokeObjectURL(mem.videoBlobUrl);
             }
+        }
+
+        // Reanudar el grabador si estaba pausado antes de detenerlo para finalizar el archivo correctamente
+        if (recorder && recorder.state === 'paused') {
+            try { recorder.resume(); } catch(e) {}
         }
 
         // 4. Detener grabación y generar archivo descargable
