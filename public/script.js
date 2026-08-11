@@ -3168,14 +3168,16 @@ async function exportMemoriesToVideo(eventId, customTitle = null, orientation = 
         canvas.height = isHorizontal ? 720 : 1280;
         const ctx = canvas.getContext('2d');
 
-        // Configurar MediaRecorder compatible con Chrome, Firefox, Safari y iOS Safari
+        // Configurar MediaRecorder prioritizando MP4 / H.264 (compatible con el 100% de reproductores como Windows Media Player, QuickTime, TVs y móviles)
         const candidateTypes = [
-            'video/webm;codecs=vp9',
-            'video/webm;codecs=vp8',
-            'video/webm',
+            'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
             'video/mp4;codecs=avc1',
             'video/mp4;codecs=h264',
-            'video/mp4'
+            'video/mp4',
+            'video/webm;codecs=vp8,opus',
+            'video/webm;codecs=vp8',
+            'video/webm;codecs=vp9',
+            'video/webm'
         ];
         let mimeType = '';
         if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
@@ -3193,7 +3195,8 @@ async function exportMemoriesToVideo(eventId, customTitle = null, orientation = 
         const recorder = mimeType ? new MediaRecorder(recordStream, { mimeType }) : new MediaRecorder(recordStream);
         const chunks = [];
         recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-        recorder.start();
+        // ⭐️ Generar bloques cada 1000ms para incluir índices de Keyframes constantes compatibles con cualquier reproductor
+        recorder.start(1000);
 
         const FPS = 30;
         const SLIDE_DURATION_SEC = 3.5;
