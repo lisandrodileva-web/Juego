@@ -19,6 +19,10 @@ const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
+// Limpieza de URLs por si PowerShell concatena variables de entorno
+const cleanDbUrl = (process.env.FIREBASE_DATABASE_URL || "https://juegos-cumple-default-rtdb.firebaseio.com").split(' ')[0].trim();
+const cleanStorageBucket = (process.env.FIREBASE_STORAGE_BUCKET || "juegos-cumple.firebasestorage.app").split(' ')[0].trim();
+
 // Inicializar Firebase Admin SDK (Cloud Run utiliza Application Default Credentials automáticamente)
 if (!admin.apps.length) {
   const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
@@ -26,15 +30,15 @@ if (!admin.apps.length) {
     const serviceAccount = require(path.resolve(serviceAccountPath));
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      databaseURL: process.env.FIREBASE_DATABASE_URL || "https://juegos-cumple-default-rtdb.firebaseio.com",
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "juegos-cumple.firebasestorage.app"
+      databaseURL: cleanDbUrl,
+      storageBucket: cleanStorageBucket
     });
   } else {
     // Entorno de Google Cloud Run / GCP con ADC
     admin.initializeApp({
       credential: admin.credential.applicationDefault(),
-      databaseURL: process.env.FIREBASE_DATABASE_URL || "https://juegos-cumple-default-rtdb.firebaseio.com",
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "juegos-cumple.firebasestorage.app"
+      databaseURL: cleanDbUrl,
+      storageBucket: cleanStorageBucket
     });
   }
 }
