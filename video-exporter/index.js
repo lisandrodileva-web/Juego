@@ -44,7 +44,7 @@ if (!admin.apps.length) {
 }
 
 const db = admin.database();
-const bucket = admin.storage().bucket();
+const bucket = admin.storage().bucket(cleanStorageBucket || "juegos-cumple.firebasestorage.app");
 
 /**
  * Health check endpoint para Google Cloud Run
