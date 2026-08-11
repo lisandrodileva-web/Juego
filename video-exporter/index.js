@@ -27,14 +27,14 @@ if (!admin.apps.length) {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       databaseURL: process.env.FIREBASE_DATABASE_URL || "https://juegos-cumple-default-rtdb.firebaseio.com",
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "juegos-cumple.appspot.com"
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "juegos-cumple.firebasestorage.app"
     });
   } else {
     // Entorno de Google Cloud Run / GCP con ADC
     admin.initializeApp({
       credential: admin.credential.applicationDefault(),
       databaseURL: process.env.FIREBASE_DATABASE_URL || "https://juegos-cumple-default-rtdb.firebaseio.com",
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "juegos-cumple.appspot.com"
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "juegos-cumple.firebasestorage.app"
     });
   }
 }
