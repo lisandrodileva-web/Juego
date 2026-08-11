@@ -3231,21 +3231,22 @@ async function exportMemoriesToVideo(eventId, customTitle = null, orientation = 
                 slidePct
             );
 
-            // Determinar duración del slide: para videos, usar la duración real del video (máx 30s)
+            // Determinar duración del slide: para fotos 3.5s, para videos máximo 6.0s (destacado dinámico para evitar bloqueos largos)
             let slideDuration = SLIDE_DURATION_SEC;
-            let framesPerSlide = FRAMES_PER_SLIDE;
             if (mem.isVideo && mem.loadedVideo && mem.loadedVideo.duration && isFinite(mem.loadedVideo.duration)) {
-                slideDuration = Math.min(mem.loadedVideo.duration + 0.5, 30);
-                framesPerSlide = Math.round(FPS * slideDuration);
+                slideDuration = Math.min(Math.max(mem.loadedVideo.duration, 3.5), 6.0);
             }
+            const framesPerSlide = Math.round(FPS * slideDuration);
 
-            // Si es video, iniciar la reproducción sincronizada sin pausar el grabador (flujo continuo)
+            // Si es video, iniciar reproducción sin bloquear el hilo de ejecución principal
             if (mem.isVideo && mem.loadedVideo) {
                 if (audioCtx && audioCtx.state === 'suspended') {
-                    try { await audioCtx.resume(); } catch(e) {}
+                    try { audioCtx.resume(); } catch(e) {}
                 }
-                mem.loadedVideo.currentTime = 0;
-                try { await mem.loadedVideo.play(); } catch(e) {}
+                try {
+                    mem.loadedVideo.currentTime = 0;
+                    mem.loadedVideo.play().catch(() => {});
+                } catch(e) {}
             }
 
             for (let frame = 0; frame < framesPerSlide; frame++) {
@@ -3459,7 +3460,8 @@ async function exportMemoriesToVideo(eventId, customTitle = null, orientation = 
 
                 ctx.restore();
 
-                await new Promise(r => setTimeout(r, 1000 / FPS));
+                // Ritmo acelerado por GPU (requestAnimationFrame) a 60Hz para renderizado ultrapiloto sin demoras
+                await new Promise(r => requestAnimationFrame(r));
             }
 
             // Limpiar video después de renderizar el slide
