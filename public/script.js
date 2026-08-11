@@ -3185,24 +3185,32 @@ async function exportMemoriesToVideo(eventId) {
                 let contentOffsetY = -cardH / 2 + 30;
 
                 if (mem.loadedImg) {
-                    // — Imágen estática
+                    // — Imágen estática (object-fit: contain para mostrar la foto COMPLETA sin recortes)
                     const imgW = cardW - 60;
                     const imgH = 520;
                     ctx.save();
                     drawRoundedRect(ctx, -cardW / 2 + 30, contentOffsetY, imgW, imgH, 12);
                     ctx.clip();
+
+                    // Fondo neutro elegante para el contenedor de la imagen
+                    ctx.fillStyle = '#F3F4F6';
+                    ctx.fillRect(-cardW / 2 + 30, contentOffsetY, imgW, imgH);
                     
                     const imgRatio = mem.loadedImg.width / mem.loadedImg.height;
                     const boxRatio = imgW / imgH;
                     let renderW, renderH, renderX, renderY;
                     if (imgRatio > boxRatio) {
-                        renderH = imgH; renderW = imgH * imgRatio;
-                        renderX = -cardW / 2 + 30 - (renderW - imgW) / 2;
-                        renderY = contentOffsetY;
-                    } else {
-                        renderW = imgW; renderH = imgW / imgRatio;
+                        // Imagen más ancha: ajustar por ancho y centrar verticalmente
+                        renderW = imgW;
+                        renderH = imgW / imgRatio;
                         renderX = -cardW / 2 + 30;
-                        renderY = contentOffsetY - (renderH - imgH) / 2;
+                        renderY = contentOffsetY + (imgH - renderH) / 2;
+                    } else {
+                        // Imagen más alta / cuadrada: ajustar por alto y centrar horizontalmente
+                        renderH = imgH;
+                        renderW = imgH * imgRatio;
+                        renderX = -cardW / 2 + 30 + (imgW - renderW) / 2;
+                        renderY = contentOffsetY;
                     }
                     ctx.drawImage(mem.loadedImg, renderX, renderY, renderW, renderH);
                     ctx.restore();
@@ -3217,24 +3225,32 @@ async function exportMemoriesToVideo(eventId) {
                         }
                     }
 
-                    // — Video en reproducción: dibujar el frame actual del <video> en el Canvas
+                    // — Video en reproducción: (object-fit: contain para mostrar el video COMPLETO sin recortes)
                     const vW = cardW - 60;
                     const vH = 520;
                     ctx.save();
                     drawRoundedRect(ctx, -cardW / 2 + 30, contentOffsetY, vW, vH, 12);
                     ctx.clip();
 
-                    const vRatio = mem.loadedVideo.videoWidth / mem.loadedVideo.videoHeight || (16/9);
+                    // Fondo neutro oscuro para el contenedor del video
+                    ctx.fillStyle = '#1F2937';
+                    ctx.fillRect(-cardW / 2 + 30, contentOffsetY, vW, vH);
+
+                    const vRatio = (mem.loadedVideo.videoWidth && mem.loadedVideo.videoHeight) 
+                        ? (mem.loadedVideo.videoWidth / mem.loadedVideo.videoHeight) 
+                        : (16/9);
                     const boxRatio = vW / vH;
                     let renderW, renderH, renderX, renderY;
                     if (vRatio > boxRatio) {
-                        renderH = vH; renderW = vH * vRatio;
-                        renderX = -cardW / 2 + 30 - (renderW - vW) / 2;
-                        renderY = contentOffsetY;
-                    } else {
-                        renderW = vW; renderH = vW / vRatio;
+                        renderW = vW;
+                        renderH = vW / vRatio;
                         renderX = -cardW / 2 + 30;
-                        renderY = contentOffsetY - (renderH - vH) / 2;
+                        renderY = contentOffsetY + (vH - renderH) / 2;
+                    } else {
+                        renderH = vH;
+                        renderW = vH * vRatio;
+                        renderX = -cardW / 2 + 30 + (vW - renderW) / 2;
+                        renderY = contentOffsetY;
                     }
                     try { ctx.drawImage(mem.loadedVideo, renderX, renderY, renderW, renderH); } catch(e) {}
                     ctx.restore();
