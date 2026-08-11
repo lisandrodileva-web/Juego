@@ -1,0 +1,24 @@
+{
+  "name": "tufiestadigital-video-exporter",
+  "version": "1.0.0",
+  "description": "Microservicio robusto en Google Cloud Run para renderizado y exportación de videos de recuerdos usando FFmpeg",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "firebase-admin": "^12.1.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
