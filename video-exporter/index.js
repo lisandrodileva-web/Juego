@@ -129,19 +129,26 @@ app.post('/generate-video', async (req, res) => {
         if (isVideo) {
           command = command.input(rawFilePath);
         } else {
-          // Para imágenes estáticas: mostrar durante 3.0 segundos
-          command = command.input(rawFilePath).loop(3.0);
+          // Para imágenes estáticas: mostrar durante 3.0 segundos y agregar pista de audio silenciosa
+          command = command
+            .input(rawFilePath)
+            .loop(3.0)
+            .input('anullsrc=channel_layout=stereo:sample_rate=44100')
+            .inputFormat('lavfi')
+            .duration(3.0);
         }
 
         command
           .fps(30)
           .videoCodec('libx264')
+          .audioCodec('aac')
+          .audioFrequency(44100)
+          .audioChannels(2)
           .outputOptions([
             '-pix_fmt yuv420p',
             '-preset ultrafast',
             `-vf scale=${targetWidth}:${targetHeight}:force_original_aspect_ratio=decrease,pad=${targetWidth}:${targetHeight}:(ow-iw)/2:(oh-ih)/2:black`
           ])
-          .duration(isVideo ? undefined : 3.0)
           .save(normVideoPath)
           .on('end', () => {
             processedFiles.push(normVideoPath);
