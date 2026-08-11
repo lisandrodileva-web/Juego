@@ -2993,8 +2993,8 @@ function animateParticle(particle, duration) {
 }
 
 /**
- * ⭐️ NUEVO: Exportar todos los recuerdos como un VIDEO (WEBM / MP4)
- * Utiliza Cloud Run para generar una película animada en alta resolución.
+ * ⭐️ EXPORTACIÓN CLOUD DE VIDEO (Google Cloud Run + FFmpeg)
+ * Desacoplado del navegador para evitar colapsar memoria RAM/GPU en el cliente.
  */
 async function exportMemoriesToVideo(eventId, customTitle = null, orientation = 'vertical', preOpenedFileHandle = null) {
     const videoBtn = document.getElementById('export-memories-video-btn');
@@ -3025,21 +3025,66 @@ async function exportMemoriesToVideo(eventId, customTitle = null, orientation = 
 
     const originalBtnText = videoBtn.innerHTML;
     videoBtn.disabled = true;
+    videoBtn.textContent = '⏳ Procesando en Cloud...';
 
-                resolve();
-            };
+    try {
+        showExportOverlay('🎬 Generando Video en Google Cloud...');
+        updateExportProgress('Enviando petición al servidor de Google Cloud...', 15);
+
+        const cloudRunEndpoint = 'https://video-exporter-595312538655.us-central1.run.app/generate-video';
+
+        updateExportProgress('Normalizando y uniendo recuerdos con FFmpeg en la nube...', 45);
+
+        const response = await fetch(cloudRunEndpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                eventId,
+                customTitle: customTitle || 'Portal de Recuerdos 🐝',
+                orientation
+            })
         });
 
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || `Error en el servidor Cloud Run (${response.status})`);
+        }
+
+        const data = await response.json();
+
+        if (!data.success || !data.videoUrl) {
+            throw new Error(data.error || 'No se obtuvo una URL válida del video generado.');
+        }
+
+        updateExportProgress('Descargando archivo .mp4 final...', 90);
+
+        if (fileHandle) {
+            const videoRes = await fetch(data.videoUrl);
+            const videoBlob = await videoRes.blob();
+            const writable = await fileHandle.createWritable();
+            await writable.write(videoBlob);
+            await writable.close();
+        } else {
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = data.videoUrl;
+            a.download = data.fileName || filename;
+            a.setAttribute('download', data.fileName || filename);
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => a.remove(), 3000);
+        }
+
+        updateExportProgress('¡Video generado con éxito!', 100);
         hideExportOverlay(true);
 
     } catch (error) {
-        console.error("Error al exportar video de recuerdos:", error);
+        console.error("Error al exportar video vía Cloud Run:", error);
         hideExportOverlay(false);
-        alert("Ocurrió un error al generar el video de recuerdos: " + error.message);
+        alert("Ocurrió un error al generar el video en la nube: " + error.message);
     } finally {
-        if (audioCtx) {
-            try { audioCtx.close(); } catch(e) {}
-        }
         videoBtn.disabled = false;
         videoBtn.innerHTML = originalBtnText;
     }
