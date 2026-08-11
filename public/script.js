@@ -2666,13 +2666,43 @@ async function exportMemoriesToHTML(eventId) {
         `;
 
         // 4. Crear un Blob y disparar la descarga
-        const blob = new Blob([finalHtml], { type: 'text/html' });
+        // ⭐️ SOLUCIÓN AL ERR_FILE_NOT_FOUND:
+        // Usar MIME type 'application/octet-stream' para FORZAR la DESCARGA DIRECTA.
+        // Esto evita que Chrome o Safari intenten NAVEGAR la pestaña actual hacia la URL blob:text/html
+        // (navegar hacia la URL descargaba el contexto actual y revocaba el Blob, causando ERR_FILE_NOT_FOUND).
+        const blob = new Blob([finalHtml], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+
+        // Mantener referencias en window para evitar que el Garbage Collector libere la RAM antes de tiempo
+        window._lastHtmlExportBlob = blob;
+        window._lastHtmlExportUrl = url;
+
+        const filename = `recuerdos-${eventId}.html`;
         const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `recuerdos-${eventId}.html`;
+        link.style.display = 'none';
+        link.href = url;
+        link.download = filename;
+        link.setAttribute('download', filename);
         document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+
+        try {
+            link.click();
+        } catch (e) {
+            const clickEvt = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+            link.dispatchEvent(clickEvt);
+        }
+
+        setTimeout(() => {
+            if (link.parentNode) link.parentNode.removeChild(link);
+        }, 3000);
+
+        setTimeout(() => {
+            if (window._lastHtmlExportUrl === url) {
+                URL.revokeObjectURL(url);
+                window._lastHtmlExportUrl = null;
+                window._lastHtmlExportBlob = null;
+            }
+        }, 300000);
 
         updateExportProgress('Descargando archivo...', 98);
         hideExportOverlay(true);
