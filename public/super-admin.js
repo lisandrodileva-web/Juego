@@ -414,6 +414,7 @@ const applyTemplateBtn = document.getElementById('apply-template-btn');
     populateFontDatalist(); // ⭐️ NUEVO: Llenar el datalist de fuentes
     themeTemplateSelector.addEventListener('change', showThemePreview); // ⭐️ NUEVO: Evento para previsualizar
     loadThemeTemplates(); // Cargar plantillas al iniciar el panel
+    loadVidrieraPlans(); // ⭐️ NUEVO: Cargar precios y planes de la vidriera (fuera del nodo de eventos)
     initializeHexDisplays(); // ⭐️ NUEVO: Activar los visualizadores de HEX
     applyTemplateBtn.addEventListener('click', applyThemeTemplate);
 
@@ -1202,6 +1203,9 @@ const applyTemplateBtn = document.getElementById('apply-template-btn');
 
         snapshot.forEach((childSnapshot) => {
             const eventId = childSnapshot.key;
+            // ⭐️ No mostrar "vidriera" en la lista de eventos de fiestas
+            if (eventId === 'vidriera') return;
+
             const li = document.createElement('li');
             li.className = 'question-item'; 
             
@@ -1256,6 +1260,221 @@ const applyTemplateBtn = document.getElementById('apply-template-btn');
                 alert(`Error al eliminar: ${error.message}`);
             }
         }
+    }
+
+    // =======================================================================
+    // ⭐️ GESTIÓN DE PRECIOS Y PLANES DE LA VIDRIERA (Landing Page) ⭐️
+    // Se almacenan en el nodo independiente 'vidriera/plans' en lugar de un evento.
+    // =======================================================================
+    const vidrieraPlansContainer = document.getElementById('vidriera-plans-container');
+    const addVidrieraPlanBtn = document.getElementById('add-vidriera-plan-btn');
+    const saveVidrieraPlansBtn = document.getElementById('save-vidriera-plans-btn');
+    const vidrieraPlansStatus = document.getElementById('vidriera-plans-status');
+
+    let currentVidrieraPlans = [];
+
+    const DEFAULT_VIDRIERA_PLANS = [
+        {
+            id: "base",
+            name: "Plan Base",
+            price: "$15.000",
+            period: "pago único",
+            description: "Ideal para reuniones o festejos íntimos.",
+            features: ["Trivia personalizada", "Juego de Memoria", "Hasta 30 invitados", "Soporte estándar"],
+            active: true,
+            popular: false
+        },
+        {
+            id: "pro",
+            name: "Plan Pro",
+            price: "$25.000",
+            period: "pago único",
+            description: "El más elegido para cumpleaños y eventos sociales.",
+            features: ["Todo lo del Plan Base", "Galería de Recuerdos en vivo", "Hasta 100 invitados", "Modo Proyector para TV/Pantalla"],
+            active: true,
+            popular: true
+        },
+        {
+            id: "full",
+            name: "Plan Full",
+            price: "$38.000",
+            period: "pago único",
+            description: "Experiencia premium completa sin límites para grandes celebraciones.",
+            features: ["Todo lo del Plan Pro", "Invitados ilimitados", "Descarga HD de todas las fotos", "Diseño y colores 100% personalizados", "Soporte Prioritario VIP"],
+            active: true,
+            popular: false
+        }
+    ];
+
+    async function loadVidrieraPlans() {
+        if (!vidrieraPlansContainer) return;
+        try {
+            // Intentar leer de vidriera/plans y luego fallback a globalConfig o events/vidriera/config/plans
+            let snap = await get(ref(database, 'vidriera/plans'));
+            if (!snap.exists()) {
+                snap = await get(ref(database, 'globalConfig/plans'));
+            }
+            if (!snap.exists()) {
+                snap = await get(ref(database, 'events/vidriera/config/plans'));
+            }
+
+            if (snap.exists()) {
+                const val = snap.val();
+                if (Array.isArray(val)) {
+                    currentVidrieraPlans = val.filter(p => p != null);
+                } else if (typeof val === 'object') {
+                    currentVidrieraPlans = Object.values(val).filter(p => p != null);
+                }
+            } else {
+                currentVidrieraPlans = JSON.parse(JSON.stringify(DEFAULT_VIDRIERA_PLANS));
+            }
+
+            renderVidrieraPlansEditor();
+        } catch (err) {
+            console.error("Error al cargar los planes de la vidriera:", err);
+            vidrieraPlansContainer.innerHTML = `<p class="text-red-500 text-sm font-semibold">Error al cargar planes: ${err.message}</p>`;
+        }
+    }
+
+    function renderVidrieraPlansEditor() {
+        if (!vidrieraPlansContainer) return;
+        vidrieraPlansContainer.innerHTML = '';
+
+        if (currentVidrieraPlans.length === 0) {
+            vidrieraPlansContainer.innerHTML = '<p class="text-sm text-gray-500 italic">No hay planes creados. Haz clic en "Añadir Nuevo Plan".</p>';
+            return;
+        }
+
+        currentVidrieraPlans.forEach((plan, idx) => {
+            const card = document.createElement('div');
+            card.className = 'p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3 relative text-gray-800 shadow-sm';
+            const featuresText = Array.isArray(plan.features) ? plan.features.join('\n') : (plan.features || '');
+
+            card.innerHTML = `
+                <div class="flex justify-between items-center border-b pb-2">
+                    <span class="font-bold text-gray-700">📌 Plan #${idx + 1} (${plan.name || 'Sin nombre'})</span>
+                    <button type="button" class="remove-plan-btn text-xs bg-red-100 text-red-700 px-3 py-1 rounded-lg font-bold hover:bg-red-200 transition-colors" data-idx="${idx}">
+                        🗑️ Eliminar Plan
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Nombre del Plan</label>
+                        <input type="text" class="plan-name-input border rounded-lg px-3 py-1.5 text-sm w-full font-medium" value="${plan.name || ''}" placeholder="Ej: Plan Pro">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Precio</label>
+                        <input type="text" class="plan-price-input border rounded-lg px-3 py-1.5 text-sm w-full font-bold text-green-700" value="${plan.price || ''}" placeholder="Ej: $25.000">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Período / Subtítulo</label>
+                        <input type="text" class="plan-period-input border rounded-lg px-3 py-1.5 text-sm w-full" value="${plan.period || 'pago único'}" placeholder="pago único">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Descripción Breve</label>
+                    <input type="text" class="plan-desc-input border rounded-lg px-3 py-1.5 text-sm w-full" value="${plan.description || ''}" placeholder="Descripción del plan">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Características (una por línea)</label>
+                    <textarea class="plan-features-input border rounded-lg p-2 text-sm w-full h-20" placeholder="Trivia personalizada&#10;Galería de recuerdos">${featuresText}</textarea>
+                </div>
+                <div class="flex items-center gap-6 pt-1">
+                    <label class="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                        <input type="checkbox" class="plan-active-check accent-green-600" ${plan.active !== false ? 'checked' : ''}>
+                        <span>Activo (Visible en Vidriera)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                        <input type="checkbox" class="plan-popular-check accent-yellow-500" ${plan.popular ? 'checked' : ''}>
+                        <span>⭐ Destacar como Más Popular</span>
+                    </label>
+                </div>
+            `;
+
+            vidrieraPlansContainer.appendChild(card);
+        });
+
+        // Event listener para eliminar planes
+        vidrieraPlansContainer.querySelectorAll('.remove-plan-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(e.target.dataset.idx);
+                currentVidrieraPlans.splice(idx, 1);
+                renderVidrieraPlansEditor();
+            });
+        });
+    }
+
+    if (addVidrieraPlanBtn) {
+        addVidrieraPlanBtn.addEventListener('click', () => {
+            collectCurrentPlanInputs();
+            currentVidrieraPlans.push({
+                id: `plan-${Date.now()}`,
+                name: 'Nuevo Plan',
+                price: '$0',
+                period: 'pago único',
+                description: 'Descripción del nuevo plan',
+                features: ['Característica 1', 'Característica 2'],
+                active: true,
+                popular: false
+            });
+            renderVidrieraPlansEditor();
+        });
+    }
+
+    function collectCurrentPlanInputs() {
+        if (!vidrieraPlansContainer) return;
+        const cards = vidrieraPlansContainer.querySelectorAll('.space-y-3');
+        cards.forEach((card, idx) => {
+            if (currentVidrieraPlans[idx]) {
+                const nameInput = card.querySelector('.plan-name-input');
+                const priceInput = card.querySelector('.plan-price-input');
+                const periodInput = card.querySelector('.plan-period-input');
+                const descInput = card.querySelector('.plan-desc-input');
+                const featuresInput = card.querySelector('.plan-features-input');
+                const activeCheck = card.querySelector('.plan-active-check');
+                const popularCheck = card.querySelector('.plan-popular-check');
+
+                currentVidrieraPlans[idx].name = nameInput ? nameInput.value.trim() : '';
+                currentVidrieraPlans[idx].price = priceInput ? priceInput.value.trim() : '';
+                currentVidrieraPlans[idx].period = periodInput ? periodInput.value.trim() : 'pago único';
+                currentVidrieraPlans[idx].description = descInput ? descInput.value.trim() : '';
+                currentVidrieraPlans[idx].active = activeCheck ? activeCheck.checked : true;
+                currentVidrieraPlans[idx].popular = popularCheck ? popularCheck.checked : false;
+
+                if (featuresInput) {
+                    currentVidrieraPlans[idx].features = featuresInput.value
+                        .split('\n')
+                        .map(f => f.trim())
+                        .filter(f => f.length > 0);
+                }
+            }
+        });
+    }
+
+    if (saveVidrieraPlansBtn) {
+        saveVidrieraPlansBtn.addEventListener('click', async () => {
+            collectCurrentPlanInputs();
+            try {
+                if (vidrieraPlansStatus) vidrieraPlansStatus.textContent = 'Guardando precios en Firebase...';
+                
+                // Guardar directamente en la clave global vidriera/plans (NO en events/)
+                await set(ref(database, 'vidriera/plans'), currentVidrieraPlans);
+                await set(ref(database, 'globalConfig/plans'), currentVidrieraPlans);
+
+                if (vidrieraPlansStatus) {
+                    vidrieraPlansStatus.textContent = '✅ ¡Precios de vidriera guardados exitosamente en la base de datos global!';
+                    vidrieraPlansStatus.className = 'text-sm font-semibold mt-3 text-green-600';
+                    setTimeout(() => { vidrieraPlansStatus.textContent = ''; }, 4000);
+                }
+                alert('¡Precios y planes de la vidriera guardados con éxito!');
+            } catch (err) {
+                console.error("Error al guardar precios de vidriera:", err);
+                if (vidrieraPlansStatus) {
+                    vidrieraPlansStatus.textContent = `❌ Error: ${err.message}`;
+                    vidrieraPlansStatus.className = 'text-sm font-semibold mt-3 text-red-600';
+                }
+            }
+        });
     }
 
 } // ⭐️⭐️⭐️ FIN: CÓDIGO ORIGINAL ENVUELTO ⭐️⭐️⭐️

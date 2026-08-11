@@ -88,8 +88,10 @@ export default function LandingPage() {
   // ⭐️ LECTURA PUNTUAL (una sola vez al cargar la página para evitar flujo continuo de datos)
   useEffect(() => {
     async function fetchPlans() {
-      // Rutas en orden de prioridad
+      // Rutas en orden de prioridad (independientes del nodo de eventos)
       const paths = [
+        'vidriera/plans',
+        'globalConfig/plans',
         'events/vidriera/config/plans',
         'events/vidriera/config/status/plans',
       ];
