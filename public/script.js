@@ -2454,93 +2454,11 @@ async function exportMemoriesToHTML(eventId, customTitle = null, preOpenedFileHa
         const config = configSnapshot.val() || {};
         const memoriesData = memoriesSnapshot.val();
 
-        // 2. Procesar recuerdos y convertir medios a Base64
-        let memoriesHtmlContent = '';
+        // 2. Procesar recuerdos y construir trozos de HTML (htmlChunks) para evitar V8 RangeError: Invalid string length
+        const htmlChunks = [];
         const memoriesArray = Object.values(memoriesData).sort((a, b) => b.timestamp - a.timestamp);
         const totalMems = memoriesArray.length;
 
-        for (const [memIdx, memory] of memoriesArray.entries()) {
-            let mediaContent = '';
-            // ⭐️ SOLUCIÓN: Usar consistentemente 'fileUrl' y 'fileType', que es como portalScript.js lo guarda.
-            const url = memory.fileUrl;
-            const type = memory.fileType;
-
-            updateExportProgress(`Procesando recuerdo ${memIdx + 1} de ${totalMems}...`, 15 + ((memIdx / totalMems) * 72));
-
-            if (url) {
-                const isVideo = type && type.startsWith('video');
-                const targetMime = (type && type.startsWith('video/')) ? type : (isVideo ? 'video/mp4' : null);
-                // Convertir la URL del archivo a Data URL (Base64) garantizando el MIME type correcto
-                const dataUrl = await convertUrlToDataURL(url, targetMime);
-                if (dataUrl) {
-                    if (isVideo) {
-                        let validVideoUrl = dataUrl;
-                        const videoMime = (type && type.startsWith('video/')) ? type : 'video/mp4';
-                        if (validVideoUrl.startsWith('data:application/octet-stream') || validVideoUrl.startsWith('data:binary/octet-stream') || validVideoUrl.startsWith('data:;')) {
-                            validVideoUrl = validVideoUrl.replace(/^data:[^;]*;/, `data:${videoMime};`);
-                        }
-                        mediaContent = `
-                            <video controls playsinline preload="metadata" style="width: 100%; max-height: 350px; border-radius: 8px; margin-top: 8px; background: #000; outline: none;">
-                                <source src="${validVideoUrl}" type="${videoMime}">
-                                <source src="${validVideoUrl}">
-                                Tu navegador no soporta la reproducción de este video.
-                            </video>`;
-                    } else {
-                        mediaContent = `<img src="${dataUrl}" alt="Recuerdo de ${memory.name}" class="memory-image" style="width: 100%; max-height: 350px; object-fit: contain; border-radius: 8px; margin-top: 8px; cursor: pointer;">`;
-                    }
-                }
-            }
-
-            // Generar HTML para comentarios
-            let commentsHtml = '';
-            if (memory.comments) {
-                commentsHtml = '<div style="margin-top: 10px; padding-left: 15px; border-left: 2px solid #eee;">';
-                // ⭐️ CORRECCIÓN: Iterar correctamente sobre los valores de los comentarios
-                Object.values(memory.comments).forEach(comment => {
-                    commentsHtml += `
-                        <div style="font-size: 0.8em; margin-bottom: 5px;">
-                            <strong style="color: #333;">${comment.name || 'Anónimo'}:</strong>
-                            <span style="color: #555;">${comment.comment || ''}</span>
-                        </div>
-                    `;
-                });
-                commentsHtml += '</div>';
-            }
-
-            // ⭐️ CORRECCIÓN: Generar HTML para las nuevas reacciones en lugar del antiguo 'likeCount'.
-            let reactionsHtml = '';
-            const reactionSummary = memory.reactionSummary;
-            if (reactionSummary && Object.keys(reactionSummary).length > 0) {
-                reactionsHtml = '<div style="display: flex; align-items: center; gap: 8px;">';
-                for (const reactionType in reactionSummary) {
-                    const count = reactionSummary[reactionType];
-                    if (count > 0 && REACTION_EMOJIS[reactionType]) {
-                        reactionsHtml += `<span style="background-color: #f0f0f0; padding: 2px 6px; border-radius: 10px;">${REACTION_EMOJIS[reactionType]} ${count}</span>`;
-                    }
-                }
-                reactionsHtml += '</div>';
-            }
-
-            const formattedDate = new Date(memory.timestamp).toLocaleString('es-ES');
-
-            const randomRotation = (Math.random() * 6 - 3).toFixed(2);
-            memoriesHtmlContent += `
-                <div style="width: 100%; display: inline-block; break-inside: avoid; margin-bottom: 15px;">
-                    <div class="memory-item" style="transform: rotate(${randomRotation}deg); transition: transform 0.3s ease; background-color: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                        <p style="font-weight: bold; color: #111; font-size: 1.1em; margin-bottom: 4px;">${memory.name}</p>
-                        <p style="font-size: 0.95em; color: #444; margin-bottom: 8px;">${memory.message || ''}</p>
-                        ${mediaContent}
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.8em; color: #666;">
-                            ${reactionsHtml}
-                            <span>${formattedDate}</span>
-                        </div>
-                        ${commentsHtml}
-                    </div>
-                </div>
-            `;
-        }
-
-        // 3. Construir el documento HTML final
         const theme = config.theme || {};
         const texts = config.texts || {};
         const cssVariables = `
@@ -2555,13 +2473,12 @@ async function exportMemoriesToHTML(eventId, customTitle = null, preOpenedFileHa
             ` : ''}
         `;
 
-        // ⭐️ Generar HTML para los stickers del portal con opacidad
+        // Generar HTML para los stickers del portal
         let stickersHtml = '';
         if (theme.portal_stickers && Array.isArray(theme.portal_stickers)) {
             const stickersToExport = theme.portal_stickers.slice(0, 2);
             stickersToExport.forEach(sticker => {
                 if (!sticker || !sticker.url) return;
-
                 stickersHtml += `
                     <img src="${sticker.url}" alt="Sticker Decorativo" style="
                         position: fixed;
@@ -2578,7 +2495,7 @@ async function exportMemoriesToHTML(eventId, customTitle = null, preOpenedFileHa
             });
         }
 
-        // ⭐️ Script para partículas flotantes
+        // Script para partículas flotantes
         let particlesScript = '';
         if (theme.show_particles !== false) {
             const particleIcon = theme.icons && theme.icons.icon_particles ? theme.icons.icon_particles : '🐝';
@@ -2611,7 +2528,7 @@ async function exportMemoriesToHTML(eventId, customTitle = null, preOpenedFileHa
             `;
         }
 
-        // ⭐️ Script de personalización dinámico de textos
+        // Script de personalización dinámico de textos
         let dynamicApplicationScript = `
             document.addEventListener('DOMContentLoaded', () => {
                 const applyStyle = (elementId, styles) => {
@@ -2678,195 +2595,271 @@ async function exportMemoriesToHTML(eventId, customTitle = null, preOpenedFileHa
             });
         `;
 
-        const finalHtml = `
-            <!DOCTYPE html>
-            <html lang="es">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Recuerdos de ${eventId}</title>
-                <link rel="preconnect" href="https://fonts.googleapis.com">
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bangers&family=Caveat&family=Creepster&family=EB+Garamond&family=Inter&family=Lato&family=Lobster&family=Lora&family=Luckiest+Guy&family=Merriweather&family=Montserrat&family=Nunito&family=Open+Sans&family=Oswald&family=PT+Serif&family=Pacifico&family=Playfair+Display&family=Poppins&family=Press+Start+2P&family=Righteous&family=Roboto&family=Roboto+Mono&family=Special+Elite&display=swap" rel="stylesheet">
-                <style>
-                    ${cssVariables}
-                    ${styleSheetText}
-                    body {
-                        font-family: ${theme.font_family || 'sans-serif'};
-                        background-color: #f0f2f5;
-                        color: var(--color-text, #333);
-                        margin: 0;
-                        padding: 20px;
-                        ${theme.background_image_url ? `
-                            background-image: url('${theme.background_image_url}');
-                            background-size: ${theme.background_image_size || 'cover'} !important;
-                            background-position: ${theme.background_image_position || 'center'} !important;
-                            background-repeat: no-repeat !important;
-                            background-attachment: fixed !important;
-                        ` : `
-                            background-image: linear-gradient(135deg, ${theme.color_primary || '#FACC15'} 0%, ${theme.color_secondary || '#F59E0B'} 100%) !important;
-                            background-size: cover !important;
-                            background-attachment: fixed !important;
-                            background-repeat: no-repeat !important;
-                        `}
-                    }
-                    .portal-container {
-                        max-width: 800px;
-                        margin: auto;
-                        background-color: var(--portal-bg, rgba(255, 255, 255, 0.9));
-                        border-radius: var(--portal-border-radius, 24px);
-                        padding: 24px;
-                        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-                        position: relative;
-                        z-index: 1;
-                    }
-                    .portal-container h1 {
-                        color: var(--portal-title-color, #1F2937);
-                        font-size: var(--portal-title-font-size, 2.25rem);
-                        text-align: center;
-                    }
-                    .memory-item:hover {
-                        transform: rotate(0deg) scale(1.02) !important;
-                        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15) !important;
-                    }
+        // 3. Agregar encabezado HTML al arreglo de trozos
+        htmlChunks.push(`<!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Recuerdos de ${eventId}</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bangers&family=Caveat&family=Creepster&family=EB+Garamond&family=Inter&family=Lato&family=Lobster&family=Lora&family=Luckiest+Guy&family=Merriweather&family=Montserrat&family=Nunito&family=Open+Sans&family=Oswald&family=PT+Serif&family=Pacifico&family=Playfair+Display&family=Poppins&family=Press+Start+2P&family=Righteous&family=Roboto&family=Roboto+Mono&family=Special+Elite&display=swap" rel="stylesheet">
+            <style>
+                ${cssVariables}
+                ${styleSheetText}
+                body {
+                    font-family: ${theme.font_family || 'sans-serif'};
+                    background-color: #f0f2f5;
+                    color: var(--color-text, #333);
+                    margin: 0;
+                    padding: 20px;
+                    ${theme.background_image_url ? `
+                        background-image: url('${theme.background_image_url}');
+                        background-size: ${theme.background_image_size || 'cover'} !important;
+                        background-position: ${theme.background_image_position || 'center'} !important;
+                        background-repeat: no-repeat !important;
+                        background-attachment: fixed !important;
+                    ` : `
+                        background-image: linear-gradient(135deg, ${theme.color_primary || '#FACC15'} 0%, ${theme.color_secondary || '#F59E0B'} 100%) !important;
+                        background-size: cover !important;
+                        background-attachment: fixed !important;
+                        background-repeat: no-repeat !important;
+                    `}
+                }
+                .portal-container {
+                    max-width: 800px;
+                    margin: auto;
+                    background-color: var(--portal-bg, rgba(255, 255, 255, 0.9));
+                    border-radius: var(--portal-border-radius, 24px);
+                    padding: 24px;
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+                    position: relative;
+                    z-index: 1;
+                }
+                .portal-container h1 {
+                    color: var(--portal-title-color, #1F2937);
+                    font-size: var(--portal-title-font-size, 2.25rem);
+                    text-align: center;
+                }
+                .memory-item:hover {
+                    transform: rotate(0deg) scale(1.02) !important;
+                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15) !important;
+                }
+                #memories-list {
+                    column-count: 1;
+                    column-gap: 15px;
+                }
+                @media (min-width: 640px) {
                     #memories-list {
-                        column-count: 1;
-                        column-gap: 15px;
+                        column-count: 2;
                     }
-                    @media (min-width: 640px) {
-                        #memories-list {
-                            column-count: 2;
-                        }
-                    }
-                </style>
-                <style>
-                    /* Estilos para el modal (lightbox) */
-                    .modal {
-                        display: none;
-                        position: fixed;
-                        z-index: 100000;
-                        left: 0;
-                        top: 0;
-                        width: 100%;
-                        height: 100%;
-                        overflow: auto;
-                        background-color: rgba(0,0,0,0.9);
-                        justify-content: center;
-                        align-items: center;
-                        flex-direction: column;
-                    }
-                    .modal-content {
-                        margin: auto;
-                        display: block;
-                        max-width: 90%;
-                        max-height: 80%;
-                    }
-                    .close-modal {
-                        position: absolute;
-                        top: 15px;
-                        right: 35px;
-                        color: #f1f1f1;
-                        font-size: 40px;
-                        font-weight: bold;
-                        cursor: pointer;
-                    }
-                    .download-btn {
-                        display: block;
-                        width: fit-content;
-                        margin: 20px auto;
-                        padding: 12px 20px;
-                        background-color: #4CAF50;
-                        color: white;
-                        text-align: center;
-                        text-decoration: none;
-                        border-radius: 5px;
-                        font-weight: bold;
-                    }
-                </style>
-            </head>
-            <body>
-                ${stickersHtml}
+                }
+            </style>
+            <style>
+                .modal {
+                    display: none;
+                    position: fixed;
+                    z-index: 100000;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    height: 100%;
+                    overflow: auto;
+                    background-color: rgba(0,0,0,0.9);
+                    justify-content: center;
+                    align-items: center;
+                    flex-direction: column;
+                }
+                .modal-content {
+                    margin: auto;
+                    display: block;
+                    max-width: 90%;
+                    max-height: 80%;
+                }
+                .close-modal {
+                    position: absolute;
+                    top: 15px;
+                    right: 35px;
+                    color: #f1f1f1;
+                    font-size: 40px;
+                    font-weight: bold;
+                    cursor: pointer;
+                }
+                .download-btn {
+                    display: block;
+                    width: fit-content;
+                    margin: 20px auto;
+                    padding: 12px 20px;
+                    background-color: #4CAF50;
+                    color: white;
+                    text-align: center;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    font-weight: bold;
+                }
+            </style>
+        </head>
+        <body>
+            ${stickersHtml}
 
-                <div class="portal-container">
-                    <header style="margin-bottom: 24px; text-align: center;">
-                        <p id="portal-greeting-text" style="text-transform: uppercase; font-weight: 600; color: #6B7280; margin-bottom: 8px;"></p>
-                        <h1 id="portal-title-text">${customTitle || texts.portal_title || 'Portal de Recuerdos'} <span class="icon-main">${theme.icons && theme.icons.icon_main ? theme.icons.icon_main : '🐝'}</span></h1>
-                        <p id="portal-subtitle-text" style="color: #4B5563; margin-top: 8px; font-size: 1.25rem;"></p>
-                    </header>
-                    
-                    <h2 id="memories-section-title-text" style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        <span>${theme.icons && theme.icons.icon_memories ? theme.icons.icon_memories : '💖'}</span>
-                        <span id="memories-section-title-label">Recuerdos</span>
-                    </h2>
+            <div class="portal-container">
+                <header style="margin-bottom: 24px; text-align: center;">
+                    <p id="portal-greeting-text" style="text-transform: uppercase; font-weight: 600; color: #6B7280; margin-bottom: 8px;"></p>
+                    <h1 id="portal-title-text">${customTitle || texts.portal_title || 'Portal de Recuerdos'} <span class="icon-main">${theme.icons && theme.icons.icon_main ? theme.icons.icon_main : '🐝'}</span></h1>
+                    <p id="portal-subtitle-text" style="color: #4B5563; margin-top: 8px; font-size: 1.25rem;"></p>
+                </header>
+                
+                <h2 id="memories-section-title-text" style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span>${theme.icons && theme.icons.icon_memories ? theme.icons.icon_memories : '💖'}</span>
+                    <span id="memories-section-title-label">Recuerdos</span>
+                </h2>
 
-                    <!-- Filtro de búsqueda -->
-                    <div style="margin: 20px 0;">
-                        <input type="text" id="search-filter" placeholder="Buscar por nombre o mensaje..." style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 1rem; outline: none; background: white;">
-                    </div>
-
-                    <h3 id="memories-list-title-text" style="font-size: 1.25rem; font-weight: bold; margin-bottom: 16px; color: #374151;">Recuerdos de la Colmena</h3>
-
-                    <div id="memories-list" style="margin-top: 20px;">
-                        ${memoriesHtmlContent}
-                    </div>
+                <div style="margin: 20px 0;">
+                    <input type="text" id="search-filter" placeholder="Buscar por nombre o mensaje..." style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 1rem; outline: none; background: white;">
                 </div>
 
-                <!-- El Modal para maximizar la imagen -->
-                <div id="imageModal" class="modal">
-                    <span class="close-modal">&times;</span>
-                    <img class="modal-content" id="modalImage">
-                    <a id="downloadLink" class="download-btn" href="#" download>Descargar Foto</a>
+                <h3 id="memories-list-title-text" style="font-size: 1.25rem; font-weight: bold; margin-bottom: 16px; color: #374151;">Recuerdos de la Colmena</h3>
+
+                <div id="memories-list" style="margin-top: 20px;">
+        `);
+
+        // 4. Procesar recuerdos uno a uno agregándolos directamente al arreglo htmlChunks
+        for (const [memIdx, memory] of memoriesArray.entries()) {
+            let mediaContent = '';
+            const url = memory.fileUrl;
+            const type = memory.fileType;
+
+            updateExportProgress(`Procesando recuerdo ${memIdx + 1} de ${totalMems}...`, 15 + ((memIdx / totalMems) * 72));
+
+            if (url) {
+                const isVideo = type && type.startsWith('video');
+                const targetMime = (type && type.startsWith('video/')) ? type : (isVideo ? 'video/mp4' : null);
+                const dataUrl = await convertUrlToDataURL(url, targetMime);
+                if (dataUrl) {
+                    if (isVideo) {
+                        let validVideoUrl = dataUrl;
+                        const videoMime = (type && type.startsWith('video/')) ? type : 'video/mp4';
+                        if (validVideoUrl.startsWith('data:application/octet-stream') || validVideoUrl.startsWith('data:binary/octet-stream') || validVideoUrl.startsWith('data:;')) {
+                            validVideoUrl = validVideoUrl.replace(/^data:[^;]*;/, `data:${videoMime};`);
+                        }
+                        mediaContent = `
+                            <video controls playsinline preload="metadata" style="width: 100%; max-height: 350px; border-radius: 8px; margin-top: 8px; background: #000; outline: none;">
+                                <source src="${validVideoUrl}" type="${videoMime}">
+                                <source src="${validVideoUrl}">
+                                Tu navegador no soporta la reproducción de este video.
+                            </video>`;
+                    } else {
+                        mediaContent = `<img src="${dataUrl}" alt="Recuerdo de ${memory.name}" class="memory-image" style="width: 100%; max-height: 350px; object-fit: contain; border-radius: 8px; margin-top: 8px; cursor: pointer;">`;
+                    }
+                }
+            }
+
+            let commentsHtml = '';
+            if (memory.comments) {
+                commentsHtml = '<div style="margin-top: 10px; padding-left: 15px; border-left: 2px solid #eee;">';
+                Object.values(memory.comments).forEach(comment => {
+                    commentsHtml += `
+                        <div style="font-size: 0.8em; margin-bottom: 5px;">
+                            <strong style="color: #333;">${comment.name || 'Anónimo'}:</strong>
+                            <span style="color: #555;">${comment.comment || ''}</span>
+                        </div>
+                    `;
+                });
+                commentsHtml += '</div>';
+            }
+
+            let reactionsHtml = '';
+            const reactionSummary = memory.reactionSummary;
+            if (reactionSummary && Object.keys(reactionSummary).length > 0) {
+                reactionsHtml = '<div style="display: flex; align-items: center; gap: 8px;">';
+                for (const reactionType in reactionSummary) {
+                    const count = reactionSummary[reactionType];
+                    if (count > 0 && REACTION_EMOJIS[reactionType]) {
+                        reactionsHtml += `<span style="background-color: #f0f0f0; padding: 2px 6px; border-radius: 10px;">${REACTION_EMOJIS[reactionType]} ${count}</span>`;
+                    }
+                }
+                reactionsHtml += '</div>';
+            }
+
+            const formattedDate = new Date(memory.timestamp).toLocaleString('es-ES');
+            const randomRotation = (Math.random() * 6 - 3).toFixed(2);
+
+            htmlChunks.push(`
+                <div style="width: 100%; display: inline-block; break-inside: avoid; margin-bottom: 15px;">
+                    <div class="memory-item" style="transform: rotate(${randomRotation}deg); transition: transform 0.3s ease; background-color: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        <p style="font-weight: bold; color: #111; font-size: 1.1em; margin-bottom: 4px;">${memory.name}</p>
+                        <p style="font-size: 0.95em; color: #444; margin-bottom: 8px;">${memory.message || ''}</p>
+                        ${mediaContent}
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.8em; color: #666;">
+                            ${reactionsHtml}
+                            <span>${formattedDate}</span>
+                        </div>
+                        ${commentsHtml}
+                    </div>
                 </div>
+            `);
+        }
 
-                <button onclick="window.scrollTo({top: 0, behavior: 'smooth'});" style="position: fixed; bottom: 20px; right: 20px; background-color: #333; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.3); z-index: 9999;">
-                    ↑
-                </button>
+        // 5. Agregar el pie de página HTML a htmlChunks
+        htmlChunks.push(`
+                </div>
+            </div>
 
-                ${particlesScript}
+            <div id="imageModal" class="modal">
+                <span class="close-modal">&times;</span>
+                <img class="modal-content" id="modalImage">
+                <a id="downloadLink" class="download-btn" href="#" download>Descargar Foto</a>
+            </div>
 
-                <script>
-                    const modal = document.getElementById('imageModal');
-                    const modalImg = document.getElementById('modalImage');
-                    const downloadLink = document.getElementById('downloadLink');
-                    document.querySelectorAll('.memory-image').forEach(img => {
-                        img.onclick = function(){
-                            modal.style.display = "flex";
-                            modalImg.src = this.src;
-                            downloadLink.href = this.src;
+            <button onclick="window.scrollTo({top: 0, behavior: 'smooth'});" style="position: fixed; bottom: 20px; right: 20px; background-color: #333; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.3); z-index: 9999;">
+                ↑
+            </button>
+
+            ${particlesScript}
+
+            <script>
+                const modal = document.getElementById('imageModal');
+                const modalImg = document.getElementById('modalImage');
+                const downloadLink = document.getElementById('downloadLink');
+                document.querySelectorAll('.memory-image').forEach(img => {
+                    img.onclick = function(){
+                        modal.style.display = "flex";
+                        modalImg.src = this.src;
+                        downloadLink.href = this.src;
+                    }
+                });
+                document.querySelector('.close-modal').onclick = () => modal.style.display = "none";
+            </script>
+            <script>
+                document.getElementById('search-filter').addEventListener('input', function(e) {
+                    const filterText = e.target.value.toLowerCase();
+                    document.querySelectorAll('#memories-list .memory-item').forEach(item => {
+                        const itemText = item.textContent.toLowerCase();
+                        if (itemText.includes(filterText)) {
+                            item.style.display = 'block';
+                        } else {
+                            item.style.display = 'none';
                         }
                     });
-                    document.querySelector('.close-modal').onclick = () => modal.style.display = "none";
-                </script>
-                <!-- ⭐️ MEJORA: Script para el filtro de búsqueda -->
-                <script>
-                    document.getElementById('search-filter').addEventListener('input', function(e) {
-                        const filterText = e.target.value.toLowerCase();
-                        document.querySelectorAll('#memories-list .memory-item').forEach(item => {
-                            const itemText = item.textContent.toLowerCase();
-                            if (itemText.includes(filterText)) {
-                                item.style.display = 'block';
-                            } else {
-                                item.style.display = 'none';
-                            }
-                        });
-                    });
-                </script>
-                <!-- ⭐️ NUEVO: Script para aplicar estilos dinámicos al cargar -->
-                <script>${dynamicApplicationScript}</script>
-            </body>
-            </html>
-        `;
+                });
+            </script>
+            <script>${dynamicApplicationScript}</script>
+        </body>
+        </html>
+        `);
 
-        // 4. Escribir en disco con el fileHandle préviamente obtenido (o usar fallback link.click())
+        // 6. Escribir archivo usando un objeto Blob multi-bloque (evita concantena cadenas gigantes de V8)
+        const htmlBlob = new Blob(htmlChunks, { type: 'text/html;charset=utf-8' });
+
         if (fileHandle) {
             updateExportProgress('Escribiendo archivo en disco...', 95);
-            const htmlBlob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
             const writable = await fileHandle.createWritable();
             await writable.write(htmlBlob);
             await writable.close();
         } else {
             // Fallback para navegadores que no soportan File System Access API
-            const fallbackBlob = new Blob([finalHtml], { type: 'application/octet-stream' });
+            const fallbackBlob = htmlBlob;
             const url = URL.createObjectURL(fallbackBlob);
 
             window._lastHtmlExportBlob = fallbackBlob;
