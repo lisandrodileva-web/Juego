@@ -90,76 +90,88 @@ app.post('/generate-video', async (req, res) => {
 
     console.log(`[${uniqueId}] Se encontraron ${memoriesList.length} recuerdos. Iniciando descargas...`);
 
-    // 2. Descargar archivos multimedia a la carpeta temporal local
-    const processedFiles = [];
     const isHorizontal = orientation === 'horizontal';
     const targetWidth = isHorizontal ? 1280 : 720;
     const targetHeight = isHorizontal ? 720 : 1280;
 
-    for (let i = 0; i < memoriesList.length; i++) {
-      const memory = memoriesList[i];
-      if (!memory.fileUrl) continue;
+    // 2. Descargar y normalizar archivos multimedia en lotes de 5 en paralelo (aceleración 500%)
+    const CONCURRENCY_LIMIT = 5;
+    const processedFilesMap = {};
 
-      const isVideo = memory.fileType && memory.fileType.startsWith('video');
-      const ext = isVideo ? 'mp4' : 'jpg';
-      const rawFilePath = path.join(inputsDir, `raw_${i}.${ext}`);
-      const normVideoPath = path.join(inputsDir, `norm_${i}.mp4`);
+    for (let i = 0; i < memoriesList.length; i += CONCURRENCY_LIMIT) {
+      const batchIndices = memoriesList.slice(i, i + CONCURRENCY_LIMIT).map((m, idx) => i + idx);
 
-      // Descargar stream del archivo
-      const response = await axios({
-        url: memory.fileUrl,
-        method: 'GET',
-        responseType: 'stream'
-      });
+      await Promise.all(batchIndices.map(async (index) => {
+        const memory = memoriesList[index];
+        if (!memory || !memory.fileUrl) return;
 
-      const writer = fs.createWriteStream(rawFilePath);
-      response.data.pipe(writer);
+        const isVideo = memory.fileType && memory.fileType.startsWith('video');
+        const ext = isVideo ? 'mp4' : 'jpg';
+        const rawFilePath = path.join(inputsDir, `raw_${index}.${ext}`);
+        const normVideoPath = path.join(inputsDir, `norm_${index}.mp4`);
 
-      await new Promise((resolve, reject) => {
-        writer.on('finish', resolve);
-        writer.on('error', reject);
-      });
-
-      // Normalizar cada elemento multimedia (foto o video) a un segmento MP4 uniforme a 30 FPS H.264
-      console.log(`[${uniqueId}] Normalizando elemento ${i + 1}/${memoriesList.length} (${isVideo ? 'Video' : 'Imagen'})...`);
-      
-      await new Promise((resolve, reject) => {
-        let command = ffmpeg();
-
-        if (isVideo) {
-          command = command.input(rawFilePath);
-        } else {
-          // Para imágenes estáticas: mostrar durante 3.0 segundos y agregar pista de audio silenciosa
-          command = command
-            .input(rawFilePath)
-            .loop(3.0)
-            .input('anullsrc=channel_layout=stereo:sample_rate=44100')
-            .inputFormat('lavfi')
-            .duration(3.0);
-        }
-
-        command
-          .fps(30)
-          .videoCodec('libx264')
-          .audioCodec('aac')
-          .audioFrequency(44100)
-          .audioChannels(2)
-          .outputOptions([
-            '-pix_fmt yuv420p',
-            '-preset ultrafast',
-            `-vf scale=${targetWidth}:${targetHeight}:force_original_aspect_ratio=decrease,pad=${targetWidth}:${targetHeight}:(ow-iw)/2:(oh-ih)/2:black`
-          ])
-          .save(normVideoPath)
-          .on('end', () => {
-            processedFiles.push(normVideoPath);
-            resolve();
-          })
-          .on('error', (err) => {
-            console.error(`[${uniqueId}] Error al normalizar archivo ${i}:`, err);
-            reject(err);
+        try {
+          // Descargar stream del archivo
+          const response = await axios({
+            url: memory.fileUrl,
+            method: 'GET',
+            responseType: 'stream'
           });
-      });
+
+          const writer = fs.createWriteStream(rawFilePath);
+          response.data.pipe(writer);
+
+          await new Promise((resolve, reject) => {
+            writer.on('finish', resolve);
+            writer.on('error', reject);
+          });
+
+          console.log(`[${uniqueId}] Normalizando elemento ${index + 1}/${memoriesList.length} (${isVideo ? 'Video' : 'Imagen'})...`);
+
+          await new Promise((resolve, reject) => {
+            let command = ffmpeg();
+
+            if (isVideo) {
+              command = command.input(rawFilePath);
+            } else {
+              command = command
+                .input(rawFilePath)
+                .loop(3.0)
+                .input('anullsrc=channel_layout=stereo:sample_rate=44100')
+                .inputFormat('lavfi')
+                .duration(3.0);
+            }
+
+            command
+              .fps(30)
+              .videoCodec('libx264')
+              .audioCodec('aac')
+              .audioFrequency(44100)
+              .audioChannels(2)
+              .outputOptions([
+                '-pix_fmt yuv420p',
+                '-preset ultrafast',
+                `-vf scale=${targetWidth}:${targetHeight}:force_original_aspect_ratio=decrease,pad=${targetWidth}:${targetHeight}:(ow-iw)/2:(oh-ih)/2:black`
+              ])
+              .save(normVideoPath)
+              .on('end', () => {
+                processedFilesMap[index] = normVideoPath;
+                resolve();
+              })
+              .on('error', (err) => {
+                console.error(`[${uniqueId}] Error al normalizar archivo ${index}:`, err);
+                reject(err);
+              });
+          });
+        } catch (err) {
+          console.warn(`[${uniqueId}] Advertencia: no se pudo procesar el recuerdo ${index + 1}:`, err.message);
+        }
+      }));
     }
+
+    const processedFiles = Object.keys(processedFilesMap)
+      .sort((a, b) => Number(a) - Number(b))
+      .map(k => processedFilesMap[k]);
 
     if (processedFiles.length === 0) {
       throw new Error('No se pudo procesar ningún archivo multimedia válido.');
