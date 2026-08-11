@@ -3221,6 +3221,8 @@ async function exportMemoriesToVideo(eventId, customTitle = null, orientation = 
         }
 
         // Renderizar slides en Canvas
+        const PHOTO_SLIDE_MS = 2500; // Fotos duran 2.5s (rápido y ágil)
+
         for (let i = 0; i < preparedMemories.length; i++) {
             const mem = preparedMemories[i];
             const tiltAngle = ((i % 2 === 0 ? 1 : -1) * (2 + (i % 3))) * (Math.PI / 180);
@@ -3231,27 +3233,49 @@ async function exportMemoriesToVideo(eventId, customTitle = null, orientation = 
                 slidePct
             );
 
-            // Determinar duración del slide: para fotos 3.5s, para videos máximo 6.0s (destacado dinámico para evitar bloqueos largos)
-            let slideDuration = SLIDE_DURATION_SEC;
-            if (mem.isVideo && mem.loadedVideo && mem.loadedVideo.duration && isFinite(mem.loadedVideo.duration)) {
-                slideDuration = Math.min(Math.max(mem.loadedVideo.duration, 3.5), 6.0);
-            }
-            const framesPerSlide = Math.round(FPS * slideDuration);
+            const isVid = mem.isVideo && mem.loadedVideo;
+            let targetDurationMs = PHOTO_SLIDE_MS;
 
-            // Si es video, iniciar reproducción sin bloquear el hilo de ejecución principal
-            if (mem.isVideo && mem.loadedVideo) {
+            if (isVid) {
                 if (audioCtx && audioCtx.state === 'suspended') {
-                    try { audioCtx.resume(); } catch(e) {}
+                    try { await audioCtx.resume(); } catch(e) {}
                 }
-                try {
-                    mem.loadedVideo.currentTime = 0;
-                    mem.loadedVideo.play().catch(() => {});
-                } catch(e) {}
+                mem.loadedVideo.currentTime = 0;
+                await new Promise(r => {
+                    mem.loadedVideo.onseeked = r;
+                    mem.loadedVideo.onerror = r;
+                });
+                try { await mem.loadedVideo.play(); } catch(e) {}
+
+                if (mem.loadedVideo.duration && isFinite(mem.loadedVideo.duration)) {
+                    // ⭐️ LOS RECUERDOS DE VIDEO DURAN SU TOTALIDAD COMPLETA
+                    targetDurationMs = mem.loadedVideo.duration * 1000;
+                }
             }
 
-            for (let frame = 0; frame < framesPerSlide; frame++) {
-                const progress = frame / framesPerSlide;
-                
+            const slideStartTime = performance.now();
+
+            while (true) {
+                const elapsed = performance.now() - slideStartTime;
+
+                if (isVid) {
+                    // Para videos: termina cuando el video llega a su fin o cuando se cumple la duración total
+                    if (mem.loadedVideo.ended || elapsed >= (targetDurationMs + 300)) {
+                        break;
+                    }
+                } else {
+                    // Para fotos: dura exactamente 2.5s
+                    if (elapsed >= targetDurationMs) {
+                        break;
+                    }
+                }
+
+                let progress = elapsed / targetDurationMs;
+                if (isVid && mem.loadedVideo.duration && isFinite(mem.loadedVideo.duration)) {
+                    progress = Math.min(mem.loadedVideo.currentTime / mem.loadedVideo.duration, 1.0);
+                }
+                progress = Math.max(0, Math.min(1, progress));
+
                 let alpha = 1;
                 if (progress < 0.08) alpha = progress / 0.08;
                 else if (progress > 0.92) alpha = (1 - progress) / 0.08;
@@ -3460,7 +3484,7 @@ async function exportMemoriesToVideo(eventId, customTitle = null, orientation = 
 
                 ctx.restore();
 
-                // Ritmo acelerado por GPU (requestAnimationFrame) a 60Hz para renderizado ultrapiloto sin demoras
+                // Renderizado GPU fluido a 60Hz sin ralentizaciones
                 await new Promise(r => requestAnimationFrame(r));
             }
 
