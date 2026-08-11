@@ -2233,6 +2233,29 @@ function hideExportOverlay(success) {
  * @param {string} eventId - El ID del evento a exportar.
  */
 async function exportMemoriesToHTML(eventId) {
+    // ⭐️ 1. Pedir ubicación del archivo CON USER GESTURE (en la primera línea) si el navegador lo soporta.
+    const filename = `recuerdos-${eventId}.html`;
+    let fileHandle = null;
+
+    if ('showSaveFilePicker' in window) {
+        try {
+            fileHandle = await window.showSaveFilePicker({
+                suggestedName: filename,
+                types: [{
+                    description: 'Archivo HTML estático',
+                    accept: { 'text/html': ['.html'] }
+                }]
+            });
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                console.log("Guardado de HTML cancelado por el usuario.");
+                return; // Detener ejecución si el usuario cancela
+            }
+            console.warn("showSaveFilePicker no disponible o falló, se utilizará fallback de descarga:", err);
+            fileHandle = null;
+        }
+    }
+
     const exportButton = document.getElementById('export-memories-btn');
     // ⭐️ NUEVO: Mapa de emojis para traducir las reacciones guardadas.
     const REACTION_EMOJIS = {
@@ -2244,9 +2267,11 @@ async function exportMemoriesToHTML(eventId) {
         'angry': '😡'
     };
 
-    const originalButtonText = exportButton.innerHTML;
-    exportButton.disabled = true;
-    exportButton.innerHTML = '⏳ Exportando...';
+    const originalButtonText = exportButton ? exportButton.innerHTML : '';
+    if (exportButton) {
+        exportButton.disabled = true;
+        exportButton.innerHTML = '⏳ Exportando...';
+    }
     showExportOverlay('📄 Generando HTML...');
     updateExportProgress('Cargando datos del evento...', 5);
 
@@ -2665,35 +2690,15 @@ async function exportMemoriesToHTML(eventId) {
             </html>
         `;
 
-        // 4. Guardar archivo con File System Access API (showSaveFilePicker) o fallback con link.click()
-        const filename = `recuerdos-${eventId}.html`;
-        const htmlBlob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
-        let savedWithPicker = false;
-
-        if ('showSaveFilePicker' in window) {
-            try {
-                const handle = await window.showSaveFilePicker({
-                    suggestedName: filename,
-                    types: [{
-                        description: 'Archivo HTML estático',
-                        accept: { 'text/html': ['.html'] }
-                    }]
-                });
-                const writable = await handle.createWritable();
-                await writable.write(htmlBlob);
-                await writable.close();
-                savedWithPicker = true;
-            } catch (err) {
-                if (err.name === 'AbortError') {
-                    console.log("Guardado de HTML cancelado por el usuario.");
-                    hideExportOverlay(false);
-                    return;
-                }
-                console.warn("Fallo showSaveFilePicker para HTML, procediendo con fallback link.click():", err);
-            }
-        }
-
-        if (!savedWithPicker) {
+        // 4. Escribir en disco con el fileHandle préviamente obtenido (o usar fallback link.click())
+        if (fileHandle) {
+            updateExportProgress('Escribiendo archivo en disco...', 95);
+            const htmlBlob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
+            const writable = await fileHandle.createWritable();
+            await writable.write(htmlBlob);
+            await writable.close();
+        } else {
+            // Fallback para navegadores que no soportan File System Access API
             const fallbackBlob = new Blob([finalHtml], { type: 'application/octet-stream' });
             const url = URL.createObjectURL(fallbackBlob);
 
@@ -2727,7 +2732,7 @@ async function exportMemoriesToHTML(eventId) {
             }, 300000);
         }
 
-        updateExportProgress('Descargando archivo...', 98);
+        updateExportProgress('Archivo guardado con éxito.', 100);
         hideExportOverlay(true);
 
     } catch (error) {
@@ -2827,6 +2832,38 @@ function animateParticle(particle, duration) {
 async function exportMemoriesToVideo(eventId) {
     const videoBtn = document.getElementById('export-memories-video-btn');
     if (!videoBtn) return;
+
+    // Detectar codec preferido (MP4 o WebM) para sugerir la extensión en el picker desde la primera línea
+    let fileExt = 'webm';
+    let videoMime = 'video/webm';
+    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
+        if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1') || MediaRecorder.isTypeSupported('video/mp4')) {
+            fileExt = 'mp4';
+            videoMime = 'video/mp4';
+        }
+    }
+    const filename = `recuerdos-${eventId}.${fileExt}`;
+
+    // ⭐️ 1. Pedir ubicación del archivo CON USER GESTURE (en la primera línea) si el navegador lo soporta.
+    let fileHandle = null;
+    if ('showSaveFilePicker' in window) {
+        try {
+            fileHandle = await window.showSaveFilePicker({
+                suggestedName: filename,
+                types: [{
+                    description: 'Video de Recuerdos',
+                    accept: { [videoMime]: [`.${fileExt}`] }
+                }]
+            });
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                console.log("Guardado de video cancelado por el usuario.");
+                return; // Detener ejecución si el usuario cancela
+            }
+            console.warn("showSaveFilePicker no disponible o falló, se utilizará fallback de descarga:", err);
+            fileHandle = null;
+        }
+    }
 
     const originalBtnText = videoBtn.innerHTML;
     videoBtn.disabled = true;
@@ -3255,8 +3292,8 @@ async function exportMemoriesToVideo(eventId) {
 
         await new Promise(resolve => {
             recorder.onstop = async () => {
-                const videoMime = fileExt === 'mp4' ? 'video/mp4' : 'video/webm';
-                const downloadBlob = new Blob(chunks, { type: videoMime });
+                const downloadMime = fileExt === 'mp4' ? 'video/mp4' : 'video/webm';
+                const downloadBlob = new Blob(chunks, { type: downloadMime });
 
                 if (!downloadBlob || downloadBlob.size === 0) {
                     console.error("El blob del video generado tiene tamaño 0.");
@@ -3265,33 +3302,18 @@ async function exportMemoriesToVideo(eventId) {
                     return;
                 }
 
-                const filename = `recuerdos-${eventId}.${fileExt}`;
-                let savedWithPicker = false;
-
-                if ('showSaveFilePicker' in window) {
+                if (fileHandle) {
+                    updateExportProgress('Escribiendo video en disco...', 98);
                     try {
-                        const handle = await window.showSaveFilePicker({
-                            suggestedName: filename,
-                            types: [{
-                                description: 'Video de Recuerdos',
-                                accept: { [videoMime]: [`.${fileExt}`] }
-                            }]
-                        });
-                        const writable = await handle.createWritable();
+                        const writable = await fileHandle.createWritable();
                         await writable.write(downloadBlob);
                         await writable.close();
-                        savedWithPicker = true;
-                    } catch (err) {
-                        if (err.name === 'AbortError') {
-                            console.log("Guardado de video cancelado por el usuario.");
-                            resolve();
-                            return;
-                        }
-                        console.warn("Fallo showSaveFilePicker para video, procediendo con fallback link.click():", err);
+                    } catch (writeErr) {
+                        console.error("Error al escribir el video en disco:", writeErr);
+                        alert("Ocurrió un error al guardar el archivo de video en el disco.");
                     }
-                }
-
-                if (!savedWithPicker) {
+                } else {
+                    // Fallback para navegadores que no soportan File System Access API
                     const fallbackBlob = new Blob(chunks, { type: 'application/octet-stream' });
                     const url = URL.createObjectURL(fallbackBlob);
                     
