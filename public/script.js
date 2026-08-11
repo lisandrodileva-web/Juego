@@ -2735,23 +2735,28 @@ async function exportMemoriesToHTML(eventId, customTitle = null, preOpenedFileHa
             if (url) {
                 const isVideo = type && type.startsWith('video');
                 const targetMime = (type && type.startsWith('video/')) ? type : (isVideo ? 'video/mp4' : null);
-                const dataUrl = await convertUrlToDataURL(url, targetMime);
-                if (dataUrl) {
-                    if (isVideo) {
-                        let validVideoUrl = dataUrl;
-                        const videoMime = (type && type.startsWith('video/')) ? type : 'video/mp4';
-                        if (validVideoUrl.startsWith('data:application/octet-stream') || validVideoUrl.startsWith('data:binary/octet-stream') || validVideoUrl.startsWith('data:;')) {
-                            validVideoUrl = validVideoUrl.replace(/^data:[^;]*;/, `data:${videoMime};`);
-                        }
-                        mediaContent = `
-                            <video controls playsinline preload="metadata" style="width: 100%; max-height: 350px; border-radius: 8px; margin-top: 8px; background: #000; outline: none;">
-                                <source src="${validVideoUrl}" type="${videoMime}">
-                                <source src="${validVideoUrl}">
-                                Tu navegador no soporta la reproducción de este video.
-                            </video>`;
-                    } else {
-                        mediaContent = `<img src="${dataUrl}" alt="Recuerdo de ${memory.name}" class="memory-image" style="width: 100%; max-height: 350px; object-fit: contain; border-radius: 8px; margin-top: 8px; cursor: pointer;">`;
+                let dataUrl = null;
+                try {
+                    dataUrl = await convertUrlToDataURL(url, targetMime);
+                } catch (e) {
+                    console.warn(`No se pudo convertir a Base64 la URL ${url}, usando URL remota directamente.`, e);
+                }
+
+                const finalMediaUrl = dataUrl || url;
+
+                if (isVideo) {
+                    let validVideoUrl = finalMediaUrl;
+                    const videoMime = (type && type.startsWith('video/')) ? type : 'video/mp4';
+                    if (typeof validVideoUrl === 'string' && (validVideoUrl.startsWith('data:application/octet-stream') || validVideoUrl.startsWith('data:binary/octet-stream') || validVideoUrl.startsWith('data:;'))) {
+                        validVideoUrl = validVideoUrl.replace(/^data:[^;]*;/, `data:${videoMime};`);
                     }
+                    mediaContent = `
+                        <video src="${validVideoUrl}" controls playsinline preload="auto" style="width: 100%; max-height: 350px; border-radius: 8px; margin-top: 8px; background: #000; outline: none; object-fit: contain;">
+                            <source src="${validVideoUrl}" type="${videoMime}">
+                            Tu navegador no soporta la reproducción de este video.
+                        </video>`;
+                } else {
+                    mediaContent = `<img src="${finalMediaUrl}" alt="Recuerdo de ${memory.name}" class="memory-image" style="width: 100%; max-height: 350px; object-fit: contain; border-radius: 8px; margin-top: 8px; cursor: pointer;">`;
                 }
             }
 
