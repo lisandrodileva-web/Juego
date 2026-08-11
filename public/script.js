@@ -3204,11 +3204,6 @@ async function exportMemoriesToVideo(eventId, customTitle = null, orientation = 
 
         // Renderizar slides en Canvas
         for (let i = 0; i < preparedMemories.length; i++) {
-            // Pausar la grabación mientras se prepara el siguiente slide (evita trabas/fotogramas congelados en la transición)
-            if (recorder && recorder.state === 'recording') {
-                try { recorder.pause(); } catch(e) {}
-            }
-
             const mem = preparedMemories[i];
             const tiltAngle = ((i % 2 === 0 ? 1 : -1) * (2 + (i % 3))) * (Math.PI / 180);
 
@@ -3226,22 +3221,13 @@ async function exportMemoriesToVideo(eventId, customTitle = null, orientation = 
                 framesPerSlide = Math.round(FPS * slideDuration);
             }
 
-            // Si es video, iniciar la reproducción sincronizada y activar audioContext
+            // Si es video, iniciar la reproducción sincronizada sin pausar el grabador (flujo continuo)
             if (mem.isVideo && mem.loadedVideo) {
                 if (audioCtx && audioCtx.state === 'suspended') {
                     try { await audioCtx.resume(); } catch(e) {}
                 }
                 mem.loadedVideo.currentTime = 0;
-                await new Promise(r => {
-                    mem.loadedVideo.onseeked = r;
-                    mem.loadedVideo.onerror = r;
-                });
                 try { await mem.loadedVideo.play(); } catch(e) {}
-            }
-
-            // Reanudar la grabación justo antes de comenzar a dibujar los frames de esta diapositiva
-            if (recorder && recorder.state === 'paused') {
-                try { recorder.resume(); } catch(e) {}
             }
 
             for (let frame = 0; frame < framesPerSlide; frame++) {
@@ -3458,11 +3444,6 @@ async function exportMemoriesToVideo(eventId, customTitle = null, orientation = 
                 await new Promise(r => setTimeout(r, 1000 / FPS));
             }
 
-            // Pausar el grabador al terminar el slide para que no se graben los milisegundos de limpieza
-            if (recorder && recorder.state === 'recording') {
-                try { recorder.pause(); } catch(e) {}
-            }
-
             // Limpiar video después de renderizar el slide
             if (mem.isVideo && mem.loadedVideo) {
                 try { mem.loadedVideo.pause(); } catch(e) {}
@@ -3471,11 +3452,6 @@ async function exportMemoriesToVideo(eventId, customTitle = null, orientation = 
             if (mem.videoBlobUrl) {
                 URL.revokeObjectURL(mem.videoBlobUrl);
             }
-        }
-
-        // Reanudar el grabador si estaba pausado antes de detenerlo para finalizar el archivo correctamente
-        if (recorder && recorder.state === 'paused') {
-            try { recorder.resume(); } catch(e) {}
         }
 
         // 4. Detener grabación y generar archivo descargable
