@@ -923,11 +923,21 @@ function initializeHost() {
     // --- ⭐️ EXPORT BUTTONS ---
     const exportHtmlBtn = document.getElementById('export-memories-btn');
     if (exportHtmlBtn) {
-        exportHtmlBtn.addEventListener('click', () => exportMemoriesToHTML(EVENT_ID));
+        exportHtmlBtn.addEventListener('click', async () => {
+            const config = await showExportConfigModal('html', EVENT_ID);
+            if (config) {
+                exportMemoriesToHTML(EVENT_ID, config.customTitle, config.fileHandle);
+            }
+        });
     }
     const exportVideoBtn = document.getElementById('export-memories-video-btn');
     if (exportVideoBtn) {
-        exportVideoBtn.addEventListener('click', () => exportMemoriesToVideo(EVENT_ID));
+        exportVideoBtn.addEventListener('click', async () => {
+            const config = await showExportConfigModal('video', EVENT_ID);
+            if (config) {
+                exportMemoriesToVideo(EVENT_ID, config.customTitle, config.orientation, config.fileHandle);
+            }
+        });
     }
     // --- Fin de los botones de export ---
 
@@ -2191,6 +2201,144 @@ async function embedFontsInCSS(cssText) {
     return cssText;
 }
 
+// ⭐️ MODAL DE CONFIGURACIÓN DE EXPORTACIÓN (Título y Orientación)
+function showExportConfigModal(type, eventId, defaultTitle = 'Portal de Recuerdos 🐝') {
+    return new Promise((resolve) => {
+        let modal = document.getElementById('export-config-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'export-config-modal';
+            modal.style.cssText = 'display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); justify-content:center; align-items:center;';
+            modal.innerHTML = `
+                <div style="background:#ffffff; border-radius:24px; padding:32px 24px; max-width:420px; width:90%; box-shadow:0 25px 60px rgba(0,0,0,0.35); color:#1f2937; animation:popIn 0.3s cubic-bezier(0.175,0.885,0.32,1.275);">
+                    <h3 id="export-modal-heading" style="font-size:1.3rem; font-weight:800; margin-bottom:18px; text-align:center; color:#111827;">
+                        ⚙️ Configurar Exportación
+                    </h3>
+                    
+                    <div style="margin-bottom:18px; text-align:left;">
+                        <label style="display:block; font-size:0.875rem; font-weight:700; color:#374151; margin-bottom:6px;">
+                            Título Principal del Evento:
+                        </label>
+                        <input type="text" id="export-modal-title-input" style="width:100%; padding:12px; border:2px solid #fde047; border-radius:12px; font-size:1rem; font-weight:600; color:#1f2937; outline:none; box-sizing:border-box;" placeholder="Ej: Recuerdos de XV Jazmín">
+                    </div>
+
+                    <div id="export-modal-orientation-wrap" style="margin-bottom:22px; text-align:left;">
+                        <label style="display:block; font-size:0.875rem; font-weight:700; color:#374151; margin-bottom:8px;">
+                            Orientación del Video:
+                        </label>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div id="orient-option-vertical" style="border:2px solid #2563eb; background:#eff6ff; border-radius:14px; padding:14px 8px; text-align:center; cursor:pointer; transition:all 0.2s;">
+                                <div style="font-size:1.6rem; margin-bottom:4px;">📱</div>
+                                <div style="font-weight:700; font-size:0.85rem; color:#1f2937;">Vertical (9:16)</div>
+                                <div style="font-size:0.75rem; color:#6b7280; margin-top:2px;">Reels / TikTok / Celular</div>
+                            </div>
+                            <div id="orient-option-horizontal" style="border:2px solid #e5e7eb; background:#ffffff; border-radius:14px; padding:14px 8px; text-align:center; cursor:pointer; transition:all 0.2s;">
+                                <div style="font-size:1.6rem; margin-bottom:4px;">🖥️</div>
+                                <div style="font-weight:700; font-size:0.85rem; color:#1f2937;">Horizontal (16:9)</div>
+                                <div style="font-size:0.75rem; color:#6b7280; margin-top:2px;">Proyector / TV / PC</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px; margin-top:24px;">
+                        <button type="button" id="export-modal-cancel-btn" style="flex:1; padding:12px; border-radius:12px; background:#f3f4f6; color:#374151; font-weight:700; border:none; cursor:pointer; font-size:0.95rem;">
+                            Cancelar
+                        </button>
+                        <button type="button" id="export-modal-confirm-btn" style="flex:1.5; padding:12px; border-radius:12px; background:#2563eb; color:#ffffff; font-weight:700; border:none; cursor:pointer; font-size:0.95rem; box-shadow:0 4px 12px rgba(37,99,235,0.35);">
+                            🚀 Descargar
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        const heading = document.getElementById('export-modal-heading');
+        const titleInput = document.getElementById('export-modal-title-input');
+        const orientWrap = document.getElementById('export-modal-orientation-wrap');
+        const optionVert = document.getElementById('orient-option-vertical');
+        const optionHoriz = document.getElementById('orient-option-horizontal');
+        const cancelBtn = document.getElementById('export-modal-cancel-btn');
+        const confirmBtn = document.getElementById('export-modal-confirm-btn');
+
+        let selectedOrientation = 'vertical';
+
+        const updateOrientationUI = (orient) => {
+            selectedOrientation = orient;
+            if (orient === 'vertical') {
+                optionVert.style.borderColor = '#2563eb';
+                optionVert.style.background = '#eff6ff';
+                optionHoriz.style.borderColor = '#e5e7eb';
+                optionHoriz.style.background = '#ffffff';
+            } else {
+                optionHoriz.style.borderColor = '#2563eb';
+                optionHoriz.style.background = '#eff6ff';
+                optionVert.style.borderColor = '#e5e7eb';
+                optionVert.style.background = '#ffffff';
+            }
+        };
+
+        optionVert.onclick = () => updateOrientationUI('vertical');
+        optionHoriz.onclick = () => updateOrientationUI('horizontal');
+
+        heading.textContent = type === 'html' ? '📄 Exportar Galería HTML' : '🎬 Exportar Video de Recuerdos';
+        titleInput.value = defaultTitle || 'Portal de Recuerdos 🐝';
+        orientWrap.style.display = type === 'html' ? 'none' : 'block';
+
+        modal.style.display = 'flex';
+
+        cancelBtn.onclick = () => {
+            modal.style.display = 'none';
+            resolve(null);
+        };
+
+        confirmBtn.onclick = async () => {
+            const customTitle = titleInput.value.trim() || defaultTitle || 'Portal de Recuerdos';
+            const orientation = selectedOrientation;
+            
+            // ⭐️ SÍNCRONO AL CLIC EN CONFIRMAR: Abrir showSaveFilePicker con User Gesture activo
+            const titleSlug = customTitle.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || eventId;
+            let fileExt = 'webm';
+            let videoMime = 'video/webm';
+            if (type === 'video') {
+                if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
+                    if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1') || MediaRecorder.isTypeSupported('video/mp4')) {
+                        fileExt = 'mp4';
+                        videoMime = 'video/mp4';
+                    }
+                }
+            }
+
+            const filename = type === 'html' ? `recuerdos-${titleSlug}.html` : `recuerdos-${titleSlug}.${fileExt}`;
+            let fileHandle = null;
+
+            if ('showSaveFilePicker' in window) {
+                try {
+                    fileHandle = await window.showSaveFilePicker({
+                        suggestedName: filename,
+                        types: [ type === 'html' 
+                            ? { description: 'Archivo HTML estático', accept: { 'text/html': ['.html'] } }
+                            : { description: 'Video de Recuerdos', accept: { [videoMime]: [`.${fileExt}`] } }
+                        ]
+                    });
+                } catch (err) {
+                    if (err.name === 'AbortError') {
+                        console.log("Exportación cancelada por el usuario.");
+                        modal.style.display = 'none';
+                        resolve(null);
+                        return;
+                    }
+                    console.warn("showSaveFilePicker no disponible o falló, usando fallback de descarga:", err);
+                    fileHandle = null;
+                }
+            }
+
+            modal.style.display = 'none';
+            resolve({ customTitle, orientation, fileHandle, filename });
+        };
+    });
+}
+
 // ⭐️ HELPERS DEL OVERLAY DE EXPORTACIÓN
 function showExportOverlay(title) {
     const overlay = document.getElementById('export-progress-overlay');
@@ -2232,12 +2380,13 @@ function hideExportOverlay(success) {
  * Función principal para exportar los recuerdos de un evento a un archivo HTML estático.
  * @param {string} eventId - El ID del evento a exportar.
  */
-async function exportMemoriesToHTML(eventId) {
-    // ⭐️ 1. Pedir ubicación del archivo CON USER GESTURE (en la primera línea) si el navegador lo soporta.
-    const filename = `recuerdos-${eventId}.html`;
-    let fileHandle = null;
+async function exportMemoriesToHTML(eventId, customTitle = null, preOpenedFileHandle = null) {
+    let fileHandle = preOpenedFileHandle;
 
-    if ('showSaveFilePicker' in window) {
+    const titleSlug = (customTitle || eventId).toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || eventId;
+    const filename = `recuerdos-${titleSlug}.html`;
+
+    if (!fileHandle && 'showSaveFilePicker' in window) {
         try {
             fileHandle = await window.showSaveFilePicker({
                 suggestedName: filename,
@@ -2249,7 +2398,7 @@ async function exportMemoriesToHTML(eventId) {
         } catch (err) {
             if (err.name === 'AbortError') {
                 console.log("Guardado de HTML cancelado por el usuario.");
-                return; // Detener ejecución si el usuario cancela
+                return;
             }
             console.warn("showSaveFilePicker no disponible o falló, se utilizará fallback de descarga:", err);
             fileHandle = null;
@@ -2623,7 +2772,7 @@ async function exportMemoriesToHTML(eventId) {
                 <div class="portal-container">
                     <header style="margin-bottom: 24px; text-align: center;">
                         <p id="portal-greeting-text" style="text-transform: uppercase; font-weight: 600; color: #6B7280; margin-bottom: 8px;"></p>
-                        <h1 id="portal-title-text">Portal de Recuerdos <span class="icon-main">${theme.icons && theme.icons.icon_main ? theme.icons.icon_main : '🐝'}</span></h1>
+                        <h1 id="portal-title-text">${customTitle || texts.portal_title || 'Portal de Recuerdos'} <span class="icon-main">${theme.icons && theme.icons.icon_main ? theme.icons.icon_main : '🐝'}</span></h1>
                         <p id="portal-subtitle-text" style="color: #4B5563; margin-top: 8px; font-size: 1.25rem;"></p>
                     </header>
                     
@@ -2829,11 +2978,13 @@ function animateParticle(particle, duration) {
  * ⭐️ NUEVO: Exportar todos los recuerdos como un VIDEO (WEBM / MP4)
  * Utiliza HTML5 Canvas + MediaRecorder API para generar una película animada en alta resolución.
  */
-async function exportMemoriesToVideo(eventId) {
+async function exportMemoriesToVideo(eventId, customTitle = null, orientation = 'vertical', preOpenedFileHandle = null) {
     const videoBtn = document.getElementById('export-memories-video-btn');
     if (!videoBtn) return;
 
-    // Detectar codec preferido (MP4 o WebM) para sugerir la extensión en el picker desde la primera línea
+    let fileHandle = preOpenedFileHandle;
+    const titleSlug = (customTitle || eventId).toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || eventId;
+
     let fileExt = 'webm';
     let videoMime = 'video/webm';
     if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
@@ -2842,11 +2993,9 @@ async function exportMemoriesToVideo(eventId) {
             videoMime = 'video/mp4';
         }
     }
-    const filename = `recuerdos-${eventId}.${fileExt}`;
+    const filename = `recuerdos-${titleSlug}.${fileExt}`;
 
-    // ⭐️ 1. Pedir ubicación del archivo CON USER GESTURE (en la primera línea) si el navegador lo soporta.
-    let fileHandle = null;
-    if ('showSaveFilePicker' in window) {
+    if (!fileHandle && 'showSaveFilePicker' in window) {
         try {
             fileHandle = await window.showSaveFilePicker({
                 suggestedName: filename,
@@ -2858,7 +3007,7 @@ async function exportMemoriesToVideo(eventId) {
         } catch (err) {
             if (err.name === 'AbortError') {
                 console.log("Guardado de video cancelado por el usuario.");
-                return; // Detener ejecución si el usuario cancela
+                return;
             }
             console.warn("showSaveFilePicker no disponible o falló, se utilizará fallback de descarga:", err);
             fileHandle = null;
@@ -2994,10 +3143,11 @@ async function exportMemoriesToVideo(eventId) {
 
         updateExportProgress('Iniciando grabación de video...', 44);
 
-        // 3. Crear Canvas HD en formato vertical 9:16 (720 x 1280 px)
+        // 3. Crear Canvas HD en formato vertical (720x1280) u horizontal (1280x720)
         const canvas = document.createElement('canvas');
-        canvas.width = 720;
-        canvas.height = 1280;
+        const isHorizontal = orientation === 'horizontal';
+        canvas.width = isHorizontal ? 1280 : 720;
+        canvas.height = isHorizontal ? 720 : 1280;
         const ctx = canvas.getContext('2d');
 
         // Configurar MediaRecorder compatible con Chrome, Firefox, Safari y iOS Safari
@@ -3142,29 +3292,38 @@ async function exportMemoriesToVideo(eventId) {
                 });
 
                 // 4. Dibujar Contenedor Portal (Encabezado)
+                const headerMarginX = 40;
+                const headerMarginY = isHorizontal ? 20 : 40;
+                const headerW = canvas.width - (headerMarginX * 2);
+                const headerH = isHorizontal ? 80 : 110;
+                const headerTitleY = isHorizontal ? 56 : 90;
+                const headerSubY = isHorizontal ? 82 : 125;
+
                 ctx.save();
                 ctx.globalAlpha = alpha;
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                drawRoundedRect(ctx, 40, 40, canvas.width - 80, 110, 20);
+                drawRoundedRect(ctx, headerMarginX, headerMarginY, headerW, headerH, 20);
                 ctx.fill();
 
                 ctx.fillStyle = theme.portal_title_color || '#1F2937';
-                ctx.font = `bold 32px ${theme.font_family || 'sans-serif'}`;
+                ctx.font = isHorizontal ? `bold 28px ${theme.font_family || 'sans-serif'}` : `bold 32px ${theme.font_family || 'sans-serif'}`;
                 ctx.textAlign = 'center';
-                ctx.fillText(texts.portal_title || 'Portal de Recuerdos 🐝', canvas.width / 2, 90);
+                ctx.fillText(customTitle || texts.portal_title || 'Portal de Recuerdos 🐝', canvas.width / 2, headerTitleY);
 
                 ctx.fillStyle = '#6B7280';
-                ctx.font = `20px ${theme.font_family || 'sans-serif'}`;
-                ctx.fillText(`Recuerdo ${i + 1} de ${preparedMemories.length}`, canvas.width / 2, 125);
+                ctx.font = isHorizontal ? `18px ${theme.font_family || 'sans-serif'}` : `20px ${theme.font_family || 'sans-serif'}`;
+                ctx.fillText(`Recuerdo ${i + 1} de ${preparedMemories.length}`, canvas.width / 2, headerSubY);
                 ctx.restore();
 
                 // 5. Dibujar Tarjeta Polaroid con movimiento dinámico estilo Ken Burns
                 ctx.save();
                 ctx.globalAlpha = alpha;
 
-                const cardW = 600;
-                const cardH = 920;
-                const cardY = 180;
+                const cardW = isHorizontal ? 560 : 600;
+                const cardH = isHorizontal ? 560 : 920;
+                const cardY = isHorizontal ? 115 : 180;
+                const mediaW = cardW - 60;
+                const mediaH = isHorizontal ? 340 : 520;
 
                 ctx.translate(canvas.width / 2, cardY + cardH / 2);
                 ctx.rotate(tiltAngle);
@@ -3182,66 +3341,62 @@ async function exportMemoriesToVideo(eventId) {
                 ctx.fill();
                 ctx.shadowColor = 'transparent';
 
-                let contentOffsetY = -cardH / 2 + 30;
+                let contentOffsetY = -cardH / 2 + (isHorizontal ? 20 : 30);
 
                 if (mem.loadedImg) {
                     // — Imágen estática (object-fit: contain para mostrar la foto COMPLETA sin recortes)
-                    const imgW = cardW - 60;
-                    const imgH = 520;
                     ctx.save();
-                    drawRoundedRect(ctx, -cardW / 2 + 30, contentOffsetY, imgW, imgH, 12);
+                    drawRoundedRect(ctx, -cardW / 2 + 30, contentOffsetY, mediaW, mediaH, 12);
                     ctx.clip();
 
                     // Fondo neutro elegante para el contenedor de la imagen
                     ctx.fillStyle = '#F3F4F6';
-                    ctx.fillRect(-cardW / 2 + 30, contentOffsetY, imgW, imgH);
+                    ctx.fillRect(-cardW / 2 + 30, contentOffsetY, mediaW, mediaH);
                     
                     const imgRatio = mem.loadedImg.width / mem.loadedImg.height;
-                    const boxRatio = imgW / imgH;
+                    const boxRatio = mediaW / mediaH;
                     let renderW, renderH, renderX, renderY;
                     if (imgRatio > boxRatio) {
                         // Imagen más ancha: ajustar por ancho y centrar verticalmente
-                        renderW = imgW;
-                        renderH = imgW / imgRatio;
+                        renderW = mediaW;
+                        renderH = mediaW / imgRatio;
                         renderX = -cardW / 2 + 30;
-                        renderY = contentOffsetY + (imgH - renderH) / 2;
+                        renderY = contentOffsetY + (mediaH - renderH) / 2;
                     } else {
                         // Imagen más alta / cuadrada: ajustar por alto y centrar horizontalmente
-                        renderH = imgH;
-                        renderW = imgH * imgRatio;
-                        renderX = -cardW / 2 + 30 + (imgW - renderW) / 2;
+                        renderH = mediaH;
+                        renderW = mediaH * imgRatio;
+                        renderX = -cardW / 2 + 30 + (mediaW - renderW) / 2;
                         renderY = contentOffsetY;
                     }
                     ctx.drawImage(mem.loadedImg, renderX, renderY, renderW, renderH);
                     ctx.restore();
-                    contentOffsetY += imgH + 30;
+                    contentOffsetY += mediaH + (isHorizontal ? 15 : 30);
 
                 } else if (mem.isVideo && mem.loadedVideo) {
                     // — Video en reproducción: (object-fit: contain para mostrar el video COMPLETO sin recortes)
-                    const vW = cardW - 60;
-                    const vH = 520;
                     ctx.save();
-                    drawRoundedRect(ctx, -cardW / 2 + 30, contentOffsetY, vW, vH, 12);
+                    drawRoundedRect(ctx, -cardW / 2 + 30, contentOffsetY, mediaW, mediaH, 12);
                     ctx.clip();
 
                     // Fondo neutro oscuro para el contenedor del video
                     ctx.fillStyle = '#1F2937';
-                    ctx.fillRect(-cardW / 2 + 30, contentOffsetY, vW, vH);
+                    ctx.fillRect(-cardW / 2 + 30, contentOffsetY, mediaW, mediaH);
 
                     const vRatio = (mem.loadedVideo.videoWidth && mem.loadedVideo.videoHeight) 
                         ? (mem.loadedVideo.videoWidth / mem.loadedVideo.videoHeight) 
                         : (16/9);
-                    const boxRatio = vW / vH;
+                    const boxRatio = mediaW / mediaH;
                     let renderW, renderH, renderX, renderY;
                     if (vRatio > boxRatio) {
-                        renderW = vW;
-                        renderH = vW / vRatio;
+                        renderW = mediaW;
+                        renderH = mediaW / vRatio;
                         renderX = -cardW / 2 + 30;
-                        renderY = contentOffsetY + (vH - renderH) / 2;
+                        renderY = contentOffsetY + (mediaH - renderH) / 2;
                     } else {
-                        renderH = vH;
-                        renderW = vH * vRatio;
-                        renderX = -cardW / 2 + 30 + (vW - renderW) / 2;
+                        renderH = mediaH;
+                        renderW = mediaH * vRatio;
+                        renderX = -cardW / 2 + 30 + (mediaW - renderW) / 2;
                         renderY = contentOffsetY;
                     }
                     try { ctx.drawImage(mem.loadedVideo, renderX, renderY, renderW, renderH); } catch(e) {}
@@ -3252,40 +3407,40 @@ async function exportMemoriesToVideo(eventId) {
                     ctx.globalAlpha = 0.6;
                     ctx.fillStyle = 'rgba(0,0,0,0.4)';
                     ctx.beginPath();
-                    ctx.arc(-cardW / 2 + 30 + vW - 36, contentOffsetY + 36, 22, 0, Math.PI * 2);
+                    ctx.arc(-cardW / 2 + 30 + mediaW - 36, contentOffsetY + 36, 22, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.fillStyle = '#FFFFFF';
                     ctx.font = '20px sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText('▶', -cardW / 2 + 30 + vW - 36, contentOffsetY + 43);
+                    ctx.fillText('▶', -cardW / 2 + 30 + mediaW - 36, contentOffsetY + 43);
                     ctx.restore();
 
-                    contentOffsetY += vH + 30;
+                    contentOffsetY += mediaH + (isHorizontal ? 15 : 30);
 
                 } else {
                     // Sin media
-                    contentOffsetY += 80;
+                    contentOffsetY += isHorizontal ? 50 : 80;
                 }
 
                 ctx.fillStyle = '#1F2937';
-                ctx.font = `bold 32px ${theme.font_family || 'sans-serif'}`;
+                ctx.font = isHorizontal ? `bold 26px ${theme.font_family || 'sans-serif'}` : `bold 32px ${theme.font_family || 'sans-serif'}`;
                 ctx.textAlign = 'center';
-                ctx.fillText(mem.name || 'Invitado', 0, contentOffsetY + 30);
+                ctx.fillText(mem.name || 'Invitado', 0, contentOffsetY + (isHorizontal ? 22 : 30));
 
                 if (mem.message) {
                     ctx.fillStyle = '#4B5563';
-                    ctx.font = `24px ${theme.font_family || 'sans-serif'}`;
+                    ctx.font = isHorizontal ? `20px ${theme.font_family || 'sans-serif'}` : `24px ${theme.font_family || 'sans-serif'}`;
                     const words = mem.message.split(' ');
                     let line = '';
-                    let lineY = contentOffsetY + 80;
-                    const maxW = cardW - 80;
+                    let lineY = contentOffsetY + (isHorizontal ? 50 : 80);
+                    const maxW = cardW - 60;
                     for (let w = 0; w < words.length; w++) {
                         const testLine = line + words[w] + ' ';
                         const metrics = ctx.measureText(testLine);
                         if (metrics.width > maxW && w > 0) {
                             ctx.fillText(line, 0, lineY);
                             line = words[w] + ' ';
-                            lineY += 34;
+                            lineY += isHorizontal ? 26 : 34;
                         } else {
                             line = testLine;
                         }
@@ -3294,9 +3449,9 @@ async function exportMemoriesToVideo(eventId) {
                 }
 
                 ctx.fillStyle = '#9CA3AF';
-                ctx.font = '20px sans-serif';
+                ctx.font = isHorizontal ? '18px sans-serif' : '20px sans-serif';
                 const formattedDate = mem.timestamp ? new Date(mem.timestamp).toLocaleDateString('es-ES') : '';
-                ctx.fillText(formattedDate, 0, cardH / 2 - 40);
+                ctx.fillText(formattedDate, 0, cardH / 2 - (isHorizontal ? 20 : 40));
 
                 ctx.restore();
 
