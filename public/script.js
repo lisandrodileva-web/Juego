@@ -2150,27 +2150,34 @@ export function initializeAppPage(path) {
 /**
  * Convierte una URL de un archivo (imagen/video) a un string Base64 (Data URL).
  * @param {string} url - La URL del archivo en Firebase Storage.
+ * @param {string} [forcedMimeType] - MIME type forzado (ej: 'video/mp4') si el blob carece de tipo.
  * @returns {Promise<string>} Una promesa que resuelve con el Data URL en formato Base64.
  */
-async function convertUrlToDataURL(url) {
-    // ⭐️ SOLUCIÓN DEFINITIVA: Usar XMLHttpRequest y FileReader.
-    // Este método no depende de una Cloud Function y es más fiable para este caso.
+async function convertUrlToDataURL(url, forcedMimeType = null) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.onload = function() {
+            let blob = xhr.response;
+            if (forcedMimeType && (!blob.type || blob.type === 'application/octet-stream' || blob.type === 'binary/octet-stream')) {
+                blob = blob.slice(0, blob.size, forcedMimeType);
+            }
             const reader = new FileReader();
             reader.onloadend = function() {
-                resolve(reader.result);
+                let result = reader.result;
+                if (forcedMimeType && typeof result === 'string' && (result.startsWith('data:application/octet-stream') || result.startsWith('data:binary/octet-stream') || result.startsWith('data:;'))) {
+                    result = result.replace(/^data:[^;]*;/, `data:${forcedMimeType};`);
+                }
+                resolve(result);
             };
             reader.onerror = reject;
-            reader.readAsDataURL(xhr.response);
+            reader.readAsDataURL(blob);
         };
         xhr.onerror = function() {
             console.error(`Error de red al intentar descargar: ${url}`);
             reject(new Error(`Fallo de red para la URL: ${url}`));
         };
         xhr.open('GET', url);
-        xhr.responseType = 'blob'; // Pedimos la respuesta como un objeto binario (blob)
+        xhr.responseType = 'blob';
         xhr.send();
     });
 }
@@ -2461,14 +2468,25 @@ async function exportMemoriesToHTML(eventId, customTitle = null, preOpenedFileHa
             updateExportProgress(`Procesando recuerdo ${memIdx + 1} de ${totalMems}...`, 15 + ((memIdx / totalMems) * 72));
 
             if (url) {
-                // Convertir la URL del archivo a Data URL (Base64)
-                const dataUrl = await convertUrlToDataURL(url);
+                const isVideo = type && type.startsWith('video');
+                const targetMime = (type && type.startsWith('video/')) ? type : (isVideo ? 'video/mp4' : null);
+                // Convertir la URL del archivo a Data URL (Base64) garantizando el MIME type correcto
+                const dataUrl = await convertUrlToDataURL(url, targetMime);
                 if (dataUrl) {
-                    const isVideo = type && type.startsWith('video');
                     if (isVideo) {
-                        mediaContent = `<video controls src="${dataUrl}" style="width: 100%; max-height: 250px; border-radius: 8px; margin-top: 8px;"></video>`;
+                        let validVideoUrl = dataUrl;
+                        const videoMime = (type && type.startsWith('video/')) ? type : 'video/mp4';
+                        if (validVideoUrl.startsWith('data:application/octet-stream') || validVideoUrl.startsWith('data:binary/octet-stream') || validVideoUrl.startsWith('data:;')) {
+                            validVideoUrl = validVideoUrl.replace(/^data:[^;]*;/, `data:${videoMime};`);
+                        }
+                        mediaContent = `
+                            <video controls playsinline preload="metadata" style="width: 100%; max-height: 350px; border-radius: 8px; margin-top: 8px; background: #000; outline: none;">
+                                <source src="${validVideoUrl}" type="${videoMime}">
+                                <source src="${validVideoUrl}">
+                                Tu navegador no soporta la reproducción de este video.
+                            </video>`;
                     } else {
-                        mediaContent = `<img src="${dataUrl}" alt="Recuerdo de ${memory.name}" class="memory-image" style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; margin-top: 8px; cursor: pointer;">`;
+                        mediaContent = `<img src="${dataUrl}" alt="Recuerdo de ${memory.name}" class="memory-image" style="width: 100%; max-height: 350px; object-fit: contain; border-radius: 8px; margin-top: 8px; cursor: pointer;">`;
                     }
                 }
             }
