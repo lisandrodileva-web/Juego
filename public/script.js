@@ -2665,44 +2665,67 @@ async function exportMemoriesToHTML(eventId) {
             </html>
         `;
 
-        // 4. Crear un Blob y disparar la descarga
-        // ⭐️ SOLUCIÓN AL ERR_FILE_NOT_FOUND:
-        // Usar MIME type 'application/octet-stream' para FORZAR la DESCARGA DIRECTA.
-        // Esto evita que Chrome o Safari intenten NAVEGAR la pestaña actual hacia la URL blob:text/html
-        // (navegar hacia la URL descargaba el contexto actual y revocaba el Blob, causando ERR_FILE_NOT_FOUND).
-        const blob = new Blob([finalHtml], { type: 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-
-        // Mantener referencias en window para evitar que el Garbage Collector libere la RAM antes de tiempo
-        window._lastHtmlExportBlob = blob;
-        window._lastHtmlExportUrl = url;
-
+        // 4. Guardar archivo con File System Access API (showSaveFilePicker) o fallback con link.click()
         const filename = `recuerdos-${eventId}.html`;
-        const link = document.createElement('a');
-        link.style.display = 'none';
-        link.href = url;
-        link.download = filename;
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
+        const htmlBlob = new Blob([finalHtml], { type: 'text/html;charset=utf-8' });
+        let savedWithPicker = false;
 
-        try {
-            link.click();
-        } catch (e) {
-            const clickEvt = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
-            link.dispatchEvent(clickEvt);
+        if ('showSaveFilePicker' in window) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: filename,
+                    types: [{
+                        description: 'Archivo HTML estático',
+                        accept: { 'text/html': ['.html'] }
+                    }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(htmlBlob);
+                await writable.close();
+                savedWithPicker = true;
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    console.log("Guardado de HTML cancelado por el usuario.");
+                    hideExportOverlay(false);
+                    return;
+                }
+                console.warn("Fallo showSaveFilePicker para HTML, procediendo con fallback link.click():", err);
+            }
         }
 
-        setTimeout(() => {
-            if (link.parentNode) link.parentNode.removeChild(link);
-        }, 3000);
+        if (!savedWithPicker) {
+            const fallbackBlob = new Blob([finalHtml], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(fallbackBlob);
 
-        setTimeout(() => {
-            if (window._lastHtmlExportUrl === url) {
-                URL.revokeObjectURL(url);
-                window._lastHtmlExportUrl = null;
-                window._lastHtmlExportBlob = null;
+            window._lastHtmlExportBlob = fallbackBlob;
+            window._lastHtmlExportUrl = url;
+
+            const link = document.createElement('a');
+            link.style.display = 'none';
+            link.href = url;
+            link.download = filename;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+
+            try {
+                link.click();
+            } catch (e) {
+                const clickEvt = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+                link.dispatchEvent(clickEvt);
             }
-        }, 300000);
+
+            setTimeout(() => {
+                if (link.parentNode) link.parentNode.removeChild(link);
+            }, 3000);
+
+            setTimeout(() => {
+                if (window._lastHtmlExportUrl === url) {
+                    URL.revokeObjectURL(url);
+                    window._lastHtmlExportUrl = null;
+                    window._lastHtmlExportBlob = null;
+                }
+            }, 300000);
+        }
 
         updateExportProgress('Descargando archivo...', 98);
         hideExportOverlay(true);
@@ -3231,11 +3254,9 @@ async function exportMemoriesToVideo(eventId) {
         recorder.stop();
 
         await new Promise(resolve => {
-            recorder.onstop = () => {
-                // ⭐️ Usar MIME type 'application/octet-stream' para FORZAR la DESCARGA DIRECTA.
-                // Esto evita que Chrome o Safari intenten NAVEGAR la pestaña actual hacia la URL blob:video
-                // (navegar hacía la pestaña descargaba el contexto y causaba ERR_FILE_NOT_FOUND).
-                const downloadBlob = new Blob(chunks, { type: 'application/octet-stream' });
+            recorder.onstop = async () => {
+                const videoMime = fileExt === 'mp4' ? 'video/mp4' : 'video/webm';
+                const downloadBlob = new Blob(chunks, { type: videoMime });
 
                 if (!downloadBlob || downloadBlob.size === 0) {
                     console.error("El blob del video generado tiene tamaño 0.");
@@ -3244,42 +3265,65 @@ async function exportMemoriesToVideo(eventId) {
                     return;
                 }
 
-                const url = URL.createObjectURL(downloadBlob);
-                
-                // Mantener referencias en el objeto window para evitar que el Garbage Collector (GC)
-                // de V8/Chromium libere la memoria RAM del Blob durante la descarga
-                window._lastVideoExportBlob = downloadBlob;
-                window._lastVideoExportUrl = url;
-
                 const filename = `recuerdos-${eventId}.${fileExt}`;
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = filename;
-                a.setAttribute('download', filename);
-                document.body.appendChild(a);
+                let savedWithPicker = false;
 
-                // Disparar evento de descarga sin causar navegación de pestaña
-                try {
-                    a.click();
-                } catch (e) {
-                    const clickEvt = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
-                    a.dispatchEvent(clickEvt);
+                if ('showSaveFilePicker' in window) {
+                    try {
+                        const handle = await window.showSaveFilePicker({
+                            suggestedName: filename,
+                            types: [{
+                                description: 'Video de Recuerdos',
+                                accept: { [videoMime]: [`.${fileExt}`] }
+                            }]
+                        });
+                        const writable = await handle.createWritable();
+                        await writable.write(downloadBlob);
+                        await writable.close();
+                        savedWithPicker = true;
+                    } catch (err) {
+                        if (err.name === 'AbortError') {
+                            console.log("Guardado de video cancelado por el usuario.");
+                            resolve();
+                            return;
+                        }
+                        console.warn("Fallo showSaveFilePicker para video, procediendo con fallback link.click():", err);
+                    }
                 }
 
-                // Eliminar el elemento enlace del DOM tras un retraso
-                setTimeout(() => {
-                    if (a.parentNode) a.parentNode.removeChild(a);
-                }, 3000);
+                if (!savedWithPicker) {
+                    const fallbackBlob = new Blob(chunks, { type: 'application/octet-stream' });
+                    const url = URL.createObjectURL(fallbackBlob);
+                    
+                    window._lastVideoExportBlob = fallbackBlob;
+                    window._lastVideoExportUrl = url;
 
-                // Revocar la URL de objeto después de 5 minutos para liberar memoria RAM de forma segura
-                setTimeout(() => {
-                    if (window._lastVideoExportUrl === url) {
-                        URL.revokeObjectURL(url);
-                        window._lastVideoExportUrl = null;
-                        window._lastVideoExportBlob = null;
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = filename;
+                    a.setAttribute('download', filename);
+                    document.body.appendChild(a);
+
+                    try {
+                        a.click();
+                    } catch (e) {
+                        const clickEvt = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+                        a.dispatchEvent(clickEvt);
                     }
-                }, 300000);
+
+                    setTimeout(() => {
+                        if (a.parentNode) a.parentNode.removeChild(a);
+                    }, 3000);
+
+                    setTimeout(() => {
+                        if (window._lastVideoExportUrl === url) {
+                            URL.revokeObjectURL(url);
+                            window._lastVideoExportUrl = null;
+                            window._lastVideoExportBlob = null;
+                        }
+                    }, 300000);
+                }
 
                 resolve();
             };
