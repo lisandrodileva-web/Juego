@@ -231,19 +231,27 @@ app.post('/generate-video', async (req, res) => {
       }
     });
 
-    // Generar URL pública o URL firmada para la descarga
-    const [signedUrl] = await uploadedFile.getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 7 * 24 * 60 * 60 * 1000 // Válida por 7 días
-    });
+    // Generar URL pública directa o URL firmada para la descarga
+    let videoUrl;
+    try {
+      await uploadedFile.makePublic();
+      videoUrl = `https://storage.googleapis.com/${bucket.name}/${encodeURIComponent(destinationPath)}`;
+    } catch (pubErr) {
+      console.warn(`[${uniqueId}] Advertencia al hacer público el archivo, usando getSignedUrl fallback:`, pubErr.message);
+      const [signedUrl] = await uploadedFile.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 7 * 24 * 60 * 60 * 1000
+      });
+      videoUrl = signedUrl;
+    }
 
-    console.log(`[${uniqueId}] Exportación completada con éxito. URL: ${signedUrl}`);
+    console.log(`[${uniqueId}] Exportación completada con éxito. URL: ${videoUrl}`);
 
     // Responder al cliente con la URL del video generado
     return res.status(200).json({
       success: true,
       message: 'Video generado y almacenado exitosamente.',
-      videoUrl: signedUrl,
+      videoUrl: videoUrl,
       eventId: eventId,
       fileName: path.basename(destinationPath)
     });
