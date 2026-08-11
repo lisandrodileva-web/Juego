@@ -3217,14 +3217,6 @@ async function exportMemoriesToVideo(eventId) {
                     contentOffsetY += imgH + 30;
 
                 } else if (mem.isVideo && mem.loadedVideo) {
-                    // Sincronizar tiempo de video si es necesario para evitar desajustes
-                    if (mem.loadedVideo.duration && isFinite(mem.loadedVideo.duration)) {
-                        const targetTime = Math.min((frame / framesPerSlide) * mem.loadedVideo.duration, mem.loadedVideo.duration - 0.05);
-                        if (Math.abs(mem.loadedVideo.currentTime - targetTime) > 0.2) {
-                            try { mem.loadedVideo.currentTime = targetTime; } catch(e) {}
-                        }
-                    }
-
                     // — Video en reproducción: (object-fit: contain para mostrar el video COMPLETO sin recortes)
                     const vW = cardW - 60;
                     const vH = 520;
